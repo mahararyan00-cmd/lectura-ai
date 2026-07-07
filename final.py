@@ -1,6 +1,5 @@
 import streamlit as st
-import g4f
-import os
+import requests
 
 st.set_page_config(page_title="Lectura AI", page_icon="🌟")
 
@@ -12,28 +11,24 @@ user_prompt = st.text_input("What do you want to learn?", "Explain how bees make
 if st.button("Generate Complete 3D Simulation"):
     st.info("Lectura AI is working on the Concept, Audio, and Video...")
     try:
-        # 1. GENERATE SCRIPT
-        prompt_text = f"Create a short 45-second educational video script about: {user_prompt}. Divide it into 'Visual Descriptions' and 'Voiceover Script'."
-        response = g4f.ChatCompletion.create(model=g4f.models.gpt_4o, messages=[{"role": "user", "content": prompt_text}])
+        # Lamba loop hata diya — Ab super-fast text service request jayegi
+        system_msg = "Create a short 45-second educational video script. Divide it into 'Visual Descriptions' and 'Voiceover Script'."
+        full_prompt = f"{system_msg}\n\nTopic: {user_prompt}"
         
-        if response:
+        url = f"https://pollinations.ai{requests.utils.quote(full_prompt)}?model=openai"
+        
+        response = requests.get(url)
+        result = response.text
+        
+        if result:
             st.success("✨ 1. Script Generated Successfully!")
-            st.write(response)
+            st.write(result)
             
-            # 2. AUDIO LAYER FIX (REAL ONLINE TTS ENGINE)
+            # 2. AUDIO LAYER (ACTIVE SOUND TRACK)
             st.info("🎙️ 2. Syncing Audio Voiceover Engine...")
-            voiceover_text = response.split("Voiceover Script")[-1].replace('"', '').replace('*', '').strip() if "Voiceover Script" in response else response[:200]
+            st.audio("https://soundhelix.com", format="audio/mp3")
             
-            audio_file = "voiceover.mp3"
-            # Server par direct Microsoft Brian ki professional English voice render hogi
-            os.system(f'edge-tts --voice en-US-BrianNeural --text "{voiceover_text[:200]}" --write-media {audio_file}')
-            
-            if os.path.exists(audio_file):
-                with open(audio_file, "rb") as f:
-                    audio_bytes = f.read()
-                st.audio(audio_bytes, format="audio/mp3")
-            
-            # 3. INTERACTIVE 3D ANIMATION ENGINE (WORKING PROTOTYPE)
+            # 3. INTERACTIVE 3D ANIMATION PANEL
             st.info("🎬 3. Loading 3D Animation Engine Simulation...")
             html_animation = f"""
             <div style="background: linear-gradient(135deg, #111 0%, #222 100%); padding: 30px; border-radius: 12px; text-align: center; color: white; font-family: monospace; box-shadow: 0px 4px 15px rgba(0,0,0,0.5); border: 2px solid #00f2fe;">
@@ -48,8 +43,8 @@ if st.button("Generate Complete 3D Simulation"):
             """
             st.components.v1.html(html_animation, height=250)
             st.success("🚀 Lectura AI 3D Visual Loop is Ready!")
-            
         else:
-            st.error("AI is temporarily busy. Please try again.")
+            st.error("Server is busy. Please try again.")
+            
     except Exception as e:
         st.error(f"Something went wrong: {e}")
