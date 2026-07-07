@@ -1,5 +1,6 @@
 import streamlit as st
 import g4f
+import os
 
 st.set_page_config(page_title="Lectura AI", page_icon="🌟")
 
@@ -19,14 +20,21 @@ if st.button("Generate Complete 3D Simulation"):
             st.success("✨ 1. Script Generated Successfully!")
             st.write(response)
             
-            # 2. AUDIO LAYER
+            # 2. AUDIO LAYER FIX (REAL ONLINE TTS ENGINE)
             st.info("🎙️ 2. Syncing Audio Voiceover Engine...")
-            st.audio("https://soundhelix.com", format="audio/mp3")
+            voiceover_text = response.split("Voiceover Script")[-1].replace('"', '').replace('*', '').strip() if "Voiceover Script" in response else response[:200]
             
-            # 3. INTERACTIVE 3D ANIMATION ENGINE (100% ERROR PROOF - NO VIDEO FREEZE)
+            audio_file = "voiceover.mp3"
+            # Server par direct Microsoft Brian ki professional English voice render hogi
+            os.system(f'edge-tts --voice en-US-BrianNeural --text "{voiceover_text[:200]}" --write-media {audio_file}')
+            
+            if os.path.exists(audio_file):
+                with open(audio_file, "rb") as f:
+                    audio_bytes = f.read()
+                st.audio(audio_bytes, format="audio/mp3")
+            
+            # 3. INTERACTIVE 3D ANIMATION ENGINE (WORKING PROTOTYPE)
             st.info("🎬 3. Loading 3D Animation Engine Simulation...")
-            
-            # Black container hata diya — Ab automatic chalti hui 3D dynamic visual matrix load hogi
             html_animation = f"""
             <div style="background: linear-gradient(135deg, #111 0%, #222 100%); padding: 30px; border-radius: 12px; text-align: center; color: white; font-family: monospace; box-shadow: 0px 4px 15px rgba(0,0,0,0.5); border: 2px solid #00f2fe;">
                 <h2 style="margin: 0; color: #00f2fe; font-size: 20px; text-shadow: 0 0 10px #00f2fe;">🛸 LECTURA 3D ENGINE ACTIVE</h2>
