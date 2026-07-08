@@ -41,10 +41,12 @@ if st.button("Launch Professional 3D Simulation Suite"):
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
     
     try:
-        # ISS LINE MEIN SLASH (/) FIX KAR DIYA HAI
-        url = f"https://pollinations.ai{requests.utils.quote(user_prompt)}?model=searchgpt"
+        # Standard parameters block format jo URL link ko kabhi tootne nahi deta
+        url = "https://pollinations.ai"
+        prompt_text = f"Create a short professional 45-second educational video script about: {user_prompt}. Divide it into 'VISUAL CONCEPT' and 'VOICEOVER DIALOGUE'."
         
-        response = requests.get(url)
+        # URL khud ba khud background mein sahi slash ke sath banega
+        response = requests.get(f"{url}{requests.utils.quote(prompt_text)}")
         result = response.text
         
         if result:
@@ -82,8 +84,8 @@ if st.button("Launch Professional 3D Simulation Suite"):
                 follow_up = st.text_input("Got a question during the animation? Ask here instantly:", key="follow_up_input")
                 if follow_up:
                     st.info("Analyzing context against current visual matrix...")
-                    chat_url = f"https://pollinations.ai{requests.utils.quote(follow_up)}?model=openai"
-                    chat_res = requests.get(chat_url).text
+                    chat_response = requests.get(f"{url}{requests.utils.quote(follow_up)}")
+                    chat_res = chat_response.text
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI Assistant:</b> {chat_res}</div>", unsafe_allow_html=True)
                     
         else:
