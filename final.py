@@ -41,20 +41,20 @@ if st.button("Launch Professional 3D Simulation Suite"):
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
     
     try:
-        # Link ka jhanjhat khatam — Ab direct safe payload system chalega
         url = "https://pollinations.ai"
         system_msg = "Create a short professional 45-second educational video script. Output plain text. Structure with clear titles: 'VISUAL CONCEPT' and 'VOICEOVER DIALOGUE'."
         
+        # Super-fast model 'p1' select kiya hai jo bina kisi latency ke instant chalta hai
         payload = {
             "messages": [
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt}
             ],
-            "model": "openai",
+            "model": "p1",
             "private": True
         }
         
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=30)
         result = response.text
         
         if result:
@@ -96,10 +96,10 @@ if st.button("Launch Professional 3D Simulation Suite"):
                         "messages": [
                             {"role": "user", "content": follow_up}
                         ],
-                        "model": "openai",
+                        "model": "p1",
                         "private": True
                     }
-                    chat_response = requests.post(url, json=chat_payload)
+                    chat_response = requests.post(url, json=chat_payload, timeout=20)
                     chat_res = chat_response.text
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI Assistant:</b> {chat_res}</div>", unsafe_allow_html=True)
                     
