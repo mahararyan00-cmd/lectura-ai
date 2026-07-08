@@ -2,4 +2,3 @@ streamlit
 requests
 edge-tts
 Pillow
-asyncio
