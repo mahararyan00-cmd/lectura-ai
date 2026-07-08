@@ -1,5 +1,5 @@
 import streamlit as st
-import requests
+from huggingface_hub import InferenceClient
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
@@ -16,7 +16,6 @@ st.markdown("""
 
 # Application States for Chat and History
 if "history" not in st.session_state: st.session_state.history = []
-if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # Sidebar for Lecture History Tab
 with st.sidebar:
@@ -41,24 +40,15 @@ if st.button("Launch Professional 3D Simulation Suite"):
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
     
     try:
-        url = "https://pollinations.ai"
+        # Free Server-to-Server Engine (No Keys Needed)
+        client = InferenceClient("google/gemma-2-9b-it")
         system_msg = "Create a short professional 45-second educational video script. Output plain text. Structure with clear titles: 'VISUAL CONCEPT' and 'VOICEOVER DIALOGUE'."
+        full_prompt = f"{system_msg}\n\nTopic: {user_prompt}"
         
-        # Super-fast model 'p1' select kiya hai jo bina kisi latency ke instant chalta hai
-        payload = {
-            "messages": [
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": user_prompt}
-            ],
-            "model": "p1",
-            "private": True
-        }
+        # Generating response smoothly
+        response = client.text_generation(full_prompt, max_new_tokens=500)
         
-        response = requests.post(url, json=payload, timeout=30)
-        result = response.text
-        
-        if result:
-            st.session_state.current_script = result
+        if response:
             st.success("✨ Phase 1 & 2: Neural Script & Visual Blueprint Compiled!")
             
             # Layout Columns for Professional Look (Side-by-Side Content)
@@ -66,7 +56,7 @@ if st.button("Launch Professional 3D Simulation Suite"):
             
             with col1:
                 st.subheader("🎬 AI Visual Description & Script")
-                st.write(result)
+                st.write(response)
                 
                 # Active Media Controllers
                 st.subheader("🎙️ Voiceover Audio Track")
@@ -86,21 +76,13 @@ if st.button("Launch Professional 3D Simulation Suite"):
                 """
                 st.components.v1.html(html_code, height=260)
                 
-                # Continue Lecture Feature: Question Box While Video is "Playing"
+                # Continue Lecture Feature: Static Q&A Guide
                 st.subheader("💬 Continue Lecture (Ask Mid-Video Questions)")
                 follow_up = st.text_input("Got a question during the animation? Ask here instantly:", key="follow_up_input")
                 if follow_up:
                     st.info("Analyzing context against current visual matrix...")
-                    
-                    chat_payload = {
-                        "messages": [
-                            {"role": "user", "content": follow_up}
-                        ],
-                        "model": "p1",
-                        "private": True
-                    }
-                    chat_response = requests.post(url, json=chat_payload, timeout=20)
-                    chat_res = chat_response.text
+                    chat_prompt = f"Answer this short question briefly: {follow_up}"
+                    chat_res = client.text_generation(chat_prompt, max_new_tokens=150)
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI Assistant:</b> {chat_res}</div>", unsafe_allow_html=True)
                     
         else:
