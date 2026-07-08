@@ -3,6 +3,8 @@ import requests
 import tempfile
 from gtts import gTTS
 import time
+import base64
+from PIL import Image
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
@@ -24,25 +26,43 @@ if "history" not in st.session_state:
 # Sidebar
 with st.sidebar:
     st.title("📜 Lecture History")
+    
+    # NEW LECTURE BUTTON
+    if st.button("🆕 Start New Lecture", use_container_width=True):
+        st.session_state.history = []
+        st.rerun()
+        
+    st.markdown("---")
+    
     if st.session_state.history:
         for idx, hist in enumerate(st.session_state.history):
             st.info(f"{idx+1}. {hist}")
     else:
         st.write("No previous lectures yet.")
 
-# Pollinations Text API Function
-def ask_pollinations(prompt_text):
+# Pollinations AI Function (Now supports Text + Image!)
+def ask_pollinations(prompt_text, image_base64=None, lang="English"):
     url = "https://text.pollinations.ai/"
+    
+    # Agar image upload hui hai toh Vision API format
+    if image_base64:
+        user_content = [
+            {"type": "text", "text": prompt_text},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+        ]
+    else:
+        user_content = prompt_text
+        
     payload = {
         "messages": [
-            {"role": "system", "content": "You are a strict educational AI. Provide ONLY to-the-point factual bullet points. DO NOT add any greetings, conclusions, or filler words."},
-            {"role": "user", "content": prompt_text}
+            {"role": "system", "content": "You are a strict educational AI. Provide ONLY to-the-point factual bullet points. Explain concepts in very simple and easy words. DO NOT add any greetings, conclusions, or filler words."},
+            {"role": "user", "content": user_content}
         ],
         "model": "openai",
         "seed": 42
     }
     headers = {"Content-Type": "application/json"}
-    response = requests.post(url, json=payload, headers=headers, timeout=60)
+    response = requests.post(url, json=payload, headers=headers, timeout=90)
     if response.status_code == 200:
         return response.text
     else:
@@ -50,7 +70,7 @@ def ask_pollinations(prompt_text):
 
 # Main Layout
 st.title("🌟 Lectura AI Pro — Studio Dashboard")
-st.write("Professional Prompt-to-3D Educational Suite (Multi-Language)")
+st.write("Professional Prompt-to-3D Educational Suite (Text & Image Support)")
 
 # Language Selection Dropdown
 language_option = st.selectbox(
@@ -58,7 +78,6 @@ language_option = st.selectbox(
     ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic")
 )
 
-# Language mapping for gTTS
 lang_codes = {
     "Roman Urdu": "ur",
     "Urdu (اردو)": "ur",
@@ -68,26 +87,55 @@ lang_codes = {
 }
 selected_lang_code = lang_codes[language_option]
 
-user_prompt = st.text_input("What scientific topic do you want to animate?", "honey kaise banta hai")
+# Input Section
+col_input1, col_input2 = st.columns(2)
+
+with col_input1:
+    user_prompt = st.text_input("✍️ Type your topic here:", "honey kaise banta hai")
+
+with col_input2:
+    # IMAGE UPLOAD OPTION
+    uploaded_file = st.file_uploader("📷 Upload an image (If you want to understand a picture):", type=["jpg", "jpeg", "png"])
+    if uploaded_file is not None:
+        st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
 
 if st.button("Launch Professional 3D Simulation Suite"):
     if user_prompt not in st.session_state.history:
-        st.session_state.history.append(user_prompt)
+        st.session_state.history.append(user_prompt if not uploaded_file else "📷 Image Lecture")
 
     progress_bar = st.progress(0)
     
-    # --- STEP 1: Generate Script & English Image Keyword ---
+    # --- PREPARE DATA ---
+    image_base64_str = None
+    if uploaded_file is not None:
+        # Convert image to base64 for AI Vision
+        img = Image.open(uploaded_file)
+        buf = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        img.save(buf, format="JPEG")
+        with open(buf.name, "rb") as f:
+            image_base64_str = base64.b64encode(f.read()).decode('utf-8')
+
+    # --- STEP 1: Generate Script ---
     st.info("⚡ Phase 1: Compiling Neural Script & Visual Keywords...")
     progress_bar.progress(10)
     
     try:
-        prompt_text = (
-            f"Create a concise educational voiceover script about: {user_prompt}. "
-            f"Include ONLY important facts and key educational points. "
-            f"YOU MUST REPLY STRICTLY IN {language_option} LANGUAGE. "
-            f"VERY IMPORTANT: On the very first line of your response, write a short 1-sentence English description of this topic for an image generator. Start that line exactly with 'IMAGE_PROMPT: '. The rest of the response must be the voiceover script."
-        )
-        result = ask_pollinations(prompt_text)
+        # Agar image hai toh prompt alag hoga, agar text hai toh alag
+        if image_base64_str:
+            prompt_text = (
+                f"Look at this image carefully. Explain the concept shown in this image in very simple, easy-to-understand words. "
+                f"YOU MUST REPLY STRICTLY IN {language_option} LANGUAGE. "
+                f"VERY IMPORTANT: On the very first line of your response, write a short 1-sentence English description of this image for an image generator. Start that line exactly with 'IMAGE_PROMPT: '. The rest of the response must be the voiceover script."
+            )
+            result = ask_pollinations(prompt_text, image_base64=image_base64_str, lang=language_option)
+        else:
+            prompt_text = (
+                f"Create a concise educational voiceover script about: {user_prompt}. "
+                f"Include ONLY important facts and key educational points. "
+                f"YOU MUST REPLY STRICTLY IN {language_option} LANGUAGE. "
+                f"VERY IMPORTANT: On the very first line of your response, write a short 1-sentence English description of this topic for an image generator. Start that line exactly with 'IMAGE_PROMPT: '. The rest of the response must be the voiceover script."
+            )
+            result = ask_pollinations(prompt_text, lang=language_option)
         
         if result and len(result.strip()) > 10:
             image_keyword = user_prompt 
@@ -105,10 +153,9 @@ if st.button("Launch Professional 3D Simulation Suite"):
             st.success("✨ Phase 1 Complete: Script Compiled!")
             
             # --- STEP 2: Generate 10 AI Images ---
-            st.info("🎨 Phase 2: Generating 10 AI Visual Frames (This may take a moment)...")
+            st.info("🎨 Phase 2: Generating 10 AI Visual Frames...")
             time.sleep(2) 
             
-            # 10 Scenes banaye hain
             img1_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 1 introduction overview 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=1"
             img2_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 2 initial stage 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=2"
             img3_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 3 early process 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=3"
@@ -139,7 +186,7 @@ if st.button("Launch Professional 3D Simulation Suite"):
             # --- DISPLAY LAYOUT ---
             st.markdown("---")
             
-            # AI VIDEO PLAYER WITH FULLSCREEN BUTTON
+            # AI VIDEO PLAYER WITH FULLSCREEN
             st.subheader("🛸 AI Generated Video Simulation (10 Frames)")
             video_player_html = f"""
             <div id="videoContainer" style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid #00f2fe; position: relative;">
@@ -158,20 +205,14 @@ if st.button("Launch Professional 3D Simulation Suite"):
                     current = (current + 1) % images.length;
                     imgElement.src = images[current];
                     frameNum.innerText = current + 1;
-                }}, 4000); // Change image every 4 seconds for better viewing
+                }}, 4000); 
                 
                 function toggleFullscreen() {{
                     var elem = document.getElementById('videoContainer');
                     if (!document.fullscreenElement) {{
-                        if (elem.requestFullscreen) {{
-                            elem.requestFullscreen();
-                        }} else if (elem.webkitRequestFullscreen) {{ /* Safari */
-                            elem.webkitRequestFullscreen();
-                        }}
+                        if (elem.requestFullscreen) {{ elem.requestFullscreen(); }}
                     }} else {{
-                        if (document.exitFullscreen) {{
-                            document.exitFullscreen();
-                        }}
+                        if (document.exitFullscreen) {{ document.exitFullscreen(); }}
                     }}
                 }}
             </script>
