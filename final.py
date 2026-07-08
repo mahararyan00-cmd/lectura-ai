@@ -1,5 +1,5 @@
 import streamlit as st
-from huggingface_hub import InferenceClient
+import requests
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
@@ -40,15 +40,16 @@ if st.button("Launch Professional 3D Simulation Suite"):
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
     
     try:
-        # Free Server-to-Server Engine (No Keys Needed)
-        client = InferenceClient("google/gemma-2-9b-it")
+        # 100% Free Public Gemini Text Proxy Link (No Tokens/Keys required)
         system_msg = "Create a short professional 45-second educational video script. Output plain text. Structure with clear titles: 'VISUAL CONCEPT' and 'VOICEOVER DIALOGUE'."
         full_prompt = f"{system_msg}\n\nTopic: {user_prompt}"
         
-        # Generating response smoothly
-        response = client.text_generation(full_prompt, max_new_tokens=500)
+        # Direct free markdown execution endpoint
+        url = f"https://pollinations.ai{requests.utils.quote(full_prompt)}?model=searchgpt"
+        response = requests.get(url, timeout=30)
+        result = response.text
         
-        if response:
+        if result and "Execution Error" not in result:
             st.success("✨ Phase 1 & 2: Neural Script & Visual Blueprint Compiled!")
             
             # Layout Columns for Professional Look (Side-by-Side Content)
@@ -56,7 +57,7 @@ if st.button("Launch Professional 3D Simulation Suite"):
             
             with col1:
                 st.subheader("🎬 AI Visual Description & Script")
-                st.write(response)
+                st.write(result)
                 
                 # Active Media Controllers
                 st.subheader("🎙️ Voiceover Audio Track")
@@ -81,11 +82,10 @@ if st.button("Launch Professional 3D Simulation Suite"):
                 follow_up = st.text_input("Got a question during the animation? Ask here instantly:", key="follow_up_input")
                 if follow_up:
                     st.info("Analyzing context against current visual matrix...")
-                    chat_prompt = f"Answer this short question briefly: {follow_up}"
-                    chat_res = client.text_generation(chat_prompt, max_new_tokens=150)
+                    chat_url = f"https://pollinations.ai{requests.utils.quote(follow_up)}?model=searchgpt"
+                    chat_res = requests.get(chat_url).text
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI Assistant:</b> {chat_res}</div>", unsafe_allow_html=True)
-                    
         else:
-            st.error("Engine timeout. Re-firing vectors...")
+            st.error("Engine temporary busy. Re-firing vectors...")
     except Exception as e:
         st.error(f"Execution Error: {e}")
