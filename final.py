@@ -41,12 +41,20 @@ if st.button("Launch Professional 3D Simulation Suite"):
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
     
     try:
-        # Standard parameters block format jo URL link ko kabhi tootne nahi deta
+        # Link ka jhanjhat khatam — Ab direct safe payload system chalega
         url = "https://pollinations.ai"
-        prompt_text = f"Create a short professional 45-second educational video script about: {user_prompt}. Divide it into 'VISUAL CONCEPT' and 'VOICEOVER DIALOGUE'."
+        system_msg = "Create a short professional 45-second educational video script. Output plain text. Structure with clear titles: 'VISUAL CONCEPT' and 'VOICEOVER DIALOGUE'."
         
-        # URL khud ba khud background mein sahi slash ke sath banega
-        response = requests.get(f"{url}{requests.utils.quote(prompt_text)}")
+        payload = {
+            "messages": [
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_prompt}
+            ],
+            "model": "openai",
+            "private": True
+        }
+        
+        response = requests.post(url, json=payload)
         result = response.text
         
         if result:
@@ -67,7 +75,6 @@ if st.button("Launch Professional 3D Simulation Suite"):
             
             with col2:
                 st.subheader("🛸 Real-time 3D Engine Simulation View")
-                # Advanced HTML Canvas Spinner Integration
                 html_code = f"""
                 <div style="background: linear-gradient(135deg, #111424 0%, #060814 100%); padding: 30px; border-radius: 12px; text-align: center; color: white; font-family: monospace; border: 2px solid #00f2fe; box-shadow: 0 0 20px rgba(0,242,254,0.2);">
                     <h3 style="margin: 0; color: #00f2fe; text-shadow: 0 0 10px #00f2fe;">3D CORE ENGINE: ACTIVE</h3>
@@ -84,7 +91,15 @@ if st.button("Launch Professional 3D Simulation Suite"):
                 follow_up = st.text_input("Got a question during the animation? Ask here instantly:", key="follow_up_input")
                 if follow_up:
                     st.info("Analyzing context against current visual matrix...")
-                    chat_response = requests.get(f"{url}{requests.utils.quote(follow_up)}")
+                    
+                    chat_payload = {
+                        "messages": [
+                            {"role": "user", "content": follow_up}
+                        ],
+                        "model": "openai",
+                        "private": True
+                    }
+                    chat_response = requests.post(url, json=chat_payload)
                     chat_res = chat_response.text
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI Assistant:</b> {chat_res}</div>", unsafe_allow_html=True)
                     
