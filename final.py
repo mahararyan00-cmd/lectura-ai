@@ -197,13 +197,66 @@ if st.button("Launch Professional 3D Simulation Suite"):
             # --- DISPLAY LAYOUT ---
             st.markdown("---")
             
-            # AI VIDEO PLAYER WITH FULLSCREEN
+            # AI VIDEO PLAYER WITH FULLSCREEN (Fixed Syntax Error)
             st.subheader("🛸 AI Generated Video Simulation (10 Frames)")
-            video_player_html = f"""
+            
+            html_template = """
             <div id="videoContainer" style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid #00f2fe; position: relative;">
-                <img id="videoSlide" src="{img1_url}" style="width: 100%; height: auto; border-radius: 8px; transition: opacity 0.8s ease-in-out;">
+                <img id="videoSlide" src="IMG1_URL" style="width: 100%; height: auto; border-radius: 8px; transition: opacity 0.8s ease-in-out;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
                     <p style="color: #00f2fe; font-family: monospace; margin: 0;">▶ Playing Simulation... | Scene: <span id="frameNum">1</span>/10</p>
                     <button onclick="toggleFullscreen()" style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: black; font-weight: bold; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">⛶ Fullscreen</button>
                 </div>
-            </
+            </div>
+            <script>
+                var images = ["IMG1_URL", "IMG2_URL", "IMG3_URL", "IMG4_URL", "IMG5_URL", "IMG6_URL", "IMG7_URL", "IMG8_URL", "IMG9_URL", "IMG10_URL"];
+                var current = 0;
+                var imgElement = document.getElementById("videoSlide");
+                var frameNum = document.getElementById("frameNum");
+                setInterval(function() {
+                    current = (current + 1) % images.length;
+                    imgElement.src = images[current];
+                    frameNum.innerText = current + 1;
+                }, 4000); 
+                
+                function toggleFullscreen() {
+                    var elem = document.getElementById('videoContainer');
+                    if (!document.fullscreenElement) {
+                        if (elem.requestFullscreen) { elem.requestFullscreen(); }
+                    } else {
+                        if (document.exitFullscreen) { document.exitFullscreen(); }
+                    }
+                }
+            </script>
+            """
+            
+            # Safe replacement without f-string curly brace conflicts
+            final_html = html_template.replace("IMG1_URL", img1_url).replace("IMG2_URL", img2_url).replace("IMG3_URL", img3_url).replace("IMG4_URL", img4_url).replace("IMG5_URL", img5_url).replace("IMG6_URL", img6_url).replace("IMG7_URL", img7_url).replace("IMG8_URL", img8_url).replace("IMG9_URL", img9_url).replace("IMG10_URL", img10_url)
+            
+            st.components.v1.html(final_html, height=500)
+
+            st.markdown("---")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.subheader(f"🎬 AI Voiceover Script ({language_option})")
+                st.write(voiceover_script)
+
+            with col2:
+                st.subheader("🎙️ AI Voiceover Audio Track")
+                if temp_audio_path:
+                    st.audio(temp_audio_path, format="audio/mp3")
+                else:
+                    st.audio("https://soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format="audio/mp3")
+                
+                # Chat Feature
+                st.subheader("💬 Continue Lecture")
+                follow_up = st.text_input("Ask a question:", key="follow_up_input")
+                if follow_up:
+                    chat_result = ask_pollinations(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
+                    st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI:</b> {chat_result}</div>", unsafe_allow_html=True)
+        else:
+            st.error("⚠️ AI returned empty response. Try again.")
+
+    except Exception as e:
+        st.error(f"Execution Error: {e}")
