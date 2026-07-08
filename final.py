@@ -40,11 +40,10 @@ with st.sidebar:
     else:
         st.write("No previous lectures yet.")
 
-# Pollinations AI Function (Now supports Text + Image!)
+# SMART POLLINATIONS AI FUNCTION (With Auto-Retry for 429 Error)
 def ask_pollinations(prompt_text, image_base64=None, lang="English"):
     url = "https://text.pollinations.ai/"
     
-    # Agar image upload hui hai toh Vision API format
     if image_base64:
         user_content = [
             {"type": "text", "text": prompt_text},
@@ -62,11 +61,25 @@ def ask_pollinations(prompt_text, image_base64=None, lang="English"):
         "seed": 42
     }
     headers = {"Content-Type": "application/json"}
-    response = requests.post(url, json=payload, headers=headers, timeout=90)
-    if response.status_code == 200:
-        return response.text
-    else:
-        raise Exception(f"API Error {response.status_code}")
+    
+    # RETRY LOGIC: Agar 429 aaye toh 5 sec ruk kar 3 baar dobara try karega
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=90)
+            if response.status_code == 200:
+                return response.text
+            elif response.status_code == 429:
+                wait_time = 5 * (attempt + 1)
+                st.warning(f"⏳ Server busy, retrying in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait_time)
+            else:
+                raise Exception(f"API Error {response.status_code}")
+        except requests.exceptions.Timeout:
+            st.warning("⏱️ Timeout, retrying...")
+            time.sleep(3)
+            
+    raise Exception("Server is currently overloaded (429). Please wait 1 minute and click the button again.")
 
 # Main Layout
 st.title("🌟 Lectura AI Pro — Studio Dashboard")
@@ -108,7 +121,6 @@ if st.button("Launch Professional 3D Simulation Suite"):
     # --- PREPARE DATA ---
     image_base64_str = None
     if uploaded_file is not None:
-        # Convert image to base64 for AI Vision
         img = Image.open(uploaded_file)
         buf = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
         img.save(buf, format="JPEG")
@@ -120,7 +132,6 @@ if st.button("Launch Professional 3D Simulation Suite"):
     progress_bar.progress(10)
     
     try:
-        # Agar image hai toh prompt alag hoga, agar text hai toh alag
         if image_base64_str:
             prompt_text = (
                 f"Look at this image carefully. Explain the concept shown in this image in very simple, easy-to-understand words. "
@@ -195,52 +206,4 @@ if st.button("Launch Professional 3D Simulation Suite"):
                     <p style="color: #00f2fe; font-family: monospace; margin: 0;">▶ Playing Simulation... | Scene: <span id="frameNum">1</span>/10</p>
                     <button onclick="toggleFullscreen()" style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: black; font-weight: bold; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">⛶ Fullscreen</button>
                 </div>
-            </div>
-            <script>
-                var images = ["{img1_url}", "{img2_url}", "{img3_url}", "{img4_url}", "{img5_url}", "{img6_url}", "{img7_url}", "{img8_url}", "{img9_url}", "{img10_url}"];
-                var current = 0;
-                var imgElement = document.getElementById("videoSlide");
-                var frameNum = document.getElementById("frameNum");
-                setInterval(function() {{
-                    current = (current + 1) % images.length;
-                    imgElement.src = images[current];
-                    frameNum.innerText = current + 1;
-                }}, 4000); 
-                
-                function toggleFullscreen() {{
-                    var elem = document.getElementById('videoContainer');
-                    if (!document.fullscreenElement) {{
-                        if (elem.requestFullscreen) {{ elem.requestFullscreen(); }}
-                    }} else {{
-                        if (document.exitFullscreen) {{ document.exitFullscreen(); }}
-                    }}
-                }}
-            </script>
-            """
-            st.components.v1.html(video_player_html, height=500)
-
-            st.markdown("---")
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.subheader(f"🎬 AI Voiceover Script ({language_option})")
-                st.write(voiceover_script)
-
-            with col2:
-                st.subheader("🎙️ AI Voiceover Audio Track")
-                if temp_audio_path:
-                    st.audio(temp_audio_path, format="audio/mp3")
-                else:
-                    st.audio("https://soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format="audio/mp3")
-                
-                # Chat Feature
-                st.subheader("💬 Continue Lecture")
-                follow_up = st.text_input("Ask a question:", key="follow_up_input")
-                if follow_up:
-                    chat_result = ask_pollinations(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
-                    st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI:</b> {chat_result}</div>", unsafe_allow_html=True)
-        else:
-            st.error("⚠️ AI returned empty response. Try again.")
-
-    except Exception as e:
-        st.error(f"Execution Error: {e}")
+            </
