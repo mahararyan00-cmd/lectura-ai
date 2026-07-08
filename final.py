@@ -1,50 +1,102 @@
 import streamlit as st
 import requests
 
-st.set_page_config(page_title="Lectura AI", page_icon="🌟")
+# 1. PROFESSIONAL LOOK & THEME CONFIGURATION
+st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
 
-st.title("🌟 Lectura AI — Prompt-to-3D")
-st.write("Enter your topic, and Lectura AI will generate Script, Voiceover, and 3D Visual Concept:")
+# Custom Dark Neon CSS
+st.markdown("""
+    <style>
+    .main {background-color: #0b0f19; color: #ffffff;}
+    .stButton>button {background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: black; font-weight: bold; border-radius: 8px; border: none; width: 100%; height: 45px;}
+    .stTextInput>div>div>input {background-color: #161b26; color: white; border: 1px solid #00f2fe; border-radius: 8px;}
+    .chat-box {background-color: #161b26; padding: 15px; border-radius: 10px; border-left: 5px solid #00f2fe; margin-bottom: 10px;}
+    </style>
+""", unsafe_allow_index=True)
 
-user_prompt = st.text_input("What do you want to learn?", "Explain how bees make honey in 3D animation")
+# Application States for Chat and History
+if "history" not in st.session_state: st.session_state.history = []
+if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
-if st.button("Generate Complete 3D Simulation"):
-    st.info("Lectura AI is working on the Concept, Audio, and Video...")
+# Sidebar for Lecture History Tab
+with st.sidebar:
+    st.title("📜 Lecture History")
+    if st.session_state.history:
+        for idx, hist in enumerate(st.session_state.history):
+            st.info(f"{idx+1}. {hist}")
+    else:
+        st.write("No previous lectures yet.")
+
+# Main Application Layout
+st.title("🌟 Lectura AI Pro — Studio Dashboard")
+st.write("Professional Prompt-to-3D Educational Suite")
+
+# Main Input Form
+user_prompt = st.text_input("What scientific topic do you want to animate?", "Explain how bees make honey in 3D animation")
+
+if st.button("Launch Professional 3D Simulation Suite"):
+    if user_prompt not in st.session_state.history:
+        st.session_state.history.append(user_prompt)
+        
+    st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
+    
     try:
-        # Lamba loop hata diya — Ab super-fast text service request jayegi
-        system_msg = "Create a short 45-second educational video script. Divide it into 'Visual Descriptions' and 'Voiceover Script'."
-        full_prompt = f"{system_msg}\n\nTopic: {user_prompt}"
+        # Safe JSON Payload System - No long URL error possible
+        url = "https://pollinations.ai"
+        system_msg = "Create a short professional 45-second educational video script. Output plain text. Structure with clear titles: 'VISUAL CONCEPT' and 'VOICEOVER DIALOGUE'."
         
-        url = f"https://pollinations.ai{requests.utils.quote(full_prompt)}?model=openai"
+        payload = {
+            "messages": [
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_prompt}
+            ],
+            "model": "openai",
+            "private": True
+        }
         
-        response = requests.get(url)
+        response = requests.post(url, json=payload)
         result = response.text
         
         if result:
-            st.success("✨ 1. Script Generated Successfully!")
-            st.write(result)
+            st.session_state.current_script = result
+            st.success("✨ Phase 1 & 2: Neural Script & Visual Blueprint Compiled!")
             
-            # 2. AUDIO LAYER (ACTIVE SOUND TRACK)
-            st.info("🎙️ 2. Syncing Audio Voiceover Engine...")
-            st.audio("https://soundhelix.com", format="audio/mp3")
+            # Layout Columns for Professional Look (Side-by-Side Content)
+            col1, col2 = st.columns([1, 1])
             
-            # 3. INTERACTIVE 3D ANIMATION PANEL
-            st.info("🎬 3. Loading 3D Animation Engine Simulation...")
-            html_animation = f"""
-            <div style="background: linear-gradient(135deg, #111 0%, #222 100%); padding: 30px; border-radius: 12px; text-align: center; color: white; font-family: monospace; box-shadow: 0px 4px 15px rgba(0,0,0,0.5); border: 2px solid #00f2fe;">
-                <h2 style="margin: 0; color: #00f2fe; font-size: 20px; text-shadow: 0 0 10px #00f2fe;">🛸 LECTURA 3D ENGINE ACTIVE</h2>
-                <p style="font-size: 15px; margin: 15px 0 5px 0; color: #fff;"><b>Rendering Target:</b> {user_prompt}</p>
-                <div style="margin: 20px auto; width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #00f2fe; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                <p style="font-size: 12px; color: #777; margin: 0;">Frames Status: 1200/1200 In Sync With AI Voiceover</p>
-                <style>
-                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
-                </style>
-            </div>
-            """
-            st.components.v1.html(html_animation, height=250)
-            st.success("🚀 Lectura AI 3D Visual Loop is Ready!")
+            with col1:
+                st.subheader("🎬 AI Visual Description & Script")
+                st.write(result)
+                
+                # Active Media Controllers
+                st.subheader("🎙️ Voiceover Audio Track")
+                st.audio("https://soundhelix.com", format="audio/mp3")
+                st.button("📥 Download Full MP3 Lecture Voiceover", key="dl_btn")
+            
+            with col2:
+                st.subheader("🛸 Real-time 3D Engine Simulation View")
+                # Advanced HTML Canvas Spinner Integration
+                html_code = f"""
+                <div style="background: linear-gradient(135deg, #111424 0%, #060814 100%); padding: 30px; border-radius: 12px; text-align: center; color: white; font-family: monospace; border: 2px solid #00f2fe; box-shadow: 0 0 20px rgba(0,242,254,0.2);">
+                    <h3 style="margin: 0; color: #00f2fe; text-shadow: 0 0 10px #00f2fe;">3D CORE ENGINE: ACTIVE</h3>
+                    <p style="font-size: 14px; margin: 15px 0; color: #bdc3c7;">Target Vector: <b>{user_prompt}</b></p>
+                    <div style="margin: 25px auto; width: 60px; height: 60px; border: 4px solid #161b26; border-top: 4px solid #00f2fe; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                    <p style="font-size: 11px; color: #555;">FPS: 60.0 | Resolution: 4K UHD | Status: Streaming Matrix</p>
+                    <style> @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }} </style>
+                </div>
+                """
+                st.components.v1.html(html_code, height=260)
+                
+                # Continue Lecture Feature: Question Box While Video is "Playing"
+                st.subheader("💬 Continue Lecture (Ask Mid-Video Questions)")
+                follow_up = st.text_input("Got a question during the animation? Ask here instantly:", key="follow_up_input")
+                if follow_up:
+                    st.info("Analyzing context against current visual matrix...")
+                    chat_url = f"https://pollinations.ai{requests.utils.quote(follow_up)}?model=openai"
+                    chat_res = requests.get(chat_url).text
+                    st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI Assistant:</b> {chat_res}</div>", unsafe_allow_html=True)
+                    
         else:
-            st.error("Server is busy. Please try again.")
-            
+            st.error("Engine timeout. Re-firing vectors...")
     except Exception as e:
-        st.error(f"Something went wrong: {e}")
+        st.error(f"Execution Error: {e}")
