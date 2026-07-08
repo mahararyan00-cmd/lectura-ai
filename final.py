@@ -52,7 +52,7 @@ def ask_pollinations(prompt_text):
 st.title("🌟 Lectura AI Pro — Studio Dashboard")
 st.write("Professional Prompt-to-3D Educational Suite (Multi-Language)")
 
-# Language Selection Dropdown (Ab galat language nahi bolega!)
+# Language Selection Dropdown
 language_option = st.selectbox(
     "🎙️ Select Voiceover Language:",
     ("English", "Urdu", "Hindi", "Arabic", "Spanish", "French")
@@ -90,19 +90,22 @@ if st.button("Launch Professional 3D Simulation Suite"):
         result = ask_pollinations(prompt_text)
         
         if result and len(result.strip()) > 10:
-            progress_bar.progress(50)
+            progress_bar.progress(40)
             st.success("✨ Phase 1 Complete: Script Compiled!")
             
-            # --- STEP 2: Generate AI Images ---
-            st.info("🎨 Phase 2: Generating AI Visual Frames for Video...")
-            time.sleep(1) # Thoda delay taake API block na kare
+            # --- STEP 2: Generate 5 AI Images for Better Video Flow ---
+            st.info("🎨 Phase 2: Generating 5 AI Visual Frames for Video Simulation...")
+            time.sleep(2) # API rate limit se bachne ke liye
             
-            img1_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' phase 1 beginning 3D realistic educational')}?width=768&height=512&nologo=true&seed=1"
-            img2_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' phase 2 middle process 3D realistic educational')}?width=768&height=512&nologo=true&seed=2"
-            img3_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' phase 3 final result 3D realistic educational')}?width=768&height=512&nologo=true&seed=3"
+            # 5 alag alag scenes banaye hain
+            img1_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 1 introduction overview 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=1"
+            img2_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 2 initial stage process 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=2"
+            img3_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 3 middle stage mechanism 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=3"
+            img4_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 4 climax main action 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=4"
+            img5_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 5 final result conclusion 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=5"
 
-            progress_bar.progress(75)
-            st.success("✨ Phase 2 Complete: Visuals Rendered!")
+            progress_bar.progress(70)
+            st.success("✨ Phase 2 Complete: 5 Visual Frames Rendered!")
             
             # --- STEP 3: Generate Voice ---
             st.info(f"🎙️ Phase 3: Synthesizing AI Voiceover in {language_option}...")
@@ -120,15 +123,15 @@ if st.button("Launch Professional 3D Simulation Suite"):
             # --- DISPLAY LAYOUT ---
             st.markdown("---")
             
-            # AI VIDEO PLAYER (Slideshow of 3 images that auto-plays like a video)
-            st.subheader("🛸 AI Generated Video Simulation")
+            # AI VIDEO PLAYER (5 Images auto-playing like a video)
+            st.subheader("🛸 AI Generated Video Simulation (5 Frames)")
             video_player_html = f"""
             <div style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid #00f2fe;">
-                <img id="videoSlide" src="{img1_url}" style="width: 100%; height: auto; border-radius: 8px; transition: opacity 0.5s;">
-                <p style="color: #00f2fe; font-family: monospace; margin-top: 5px;">▶ Playing 3D Simulation... | Frame: <span id="frameNum">1</span>/3</p>
+                <img id="videoSlide" src="{img1_url}" style="width: 100%; height: auto; border-radius: 8px; transition: opacity 0.8s ease-in-out;">
+                <p style="color: #00f2fe; font-family: monospace; margin-top: 5px;">▶ Playing Simulation... | Scene: <span id="frameNum">1</span>/5</p>
             </div>
             <script>
-                var images = ["{img1_url}", "{img2_url}", "{img3_url}"];
+                var images = ["{img1_url}", "{img2_url}", "{img3_url}", "{img4_url}", "{img5_url}"];
                 var current = 0;
                 var imgElement = document.getElementById("videoSlide");
                 var frameNum = document.getElementById("frameNum");
