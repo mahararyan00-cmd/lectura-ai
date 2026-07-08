@@ -10,28 +10,46 @@ from PIL import Image
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
 
-# Custom Dark Neon CSS
-st.markdown("""
-    <style>
-    .main {background-color: #0b0f19; color: #ffffff;}
-    .stButton>button {background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: black; font-weight: bold; border-radius: 8px; border: none; width: 100%; height: 45px;}
-    .stTextInput>div>div>input {background-color: #161b26; color: white; border: 1px solid #00f2fe; border-radius: 8px;}
-    .chat-box {background-color: #161b26; padding: 15px; border-radius: 10px; border-left: 5px solid #00f2fe; margin-bottom: 10px;}
-    </style>
-""", unsafe_allow_html=True)
-
-# Application States
-if "history" not in st.session_state:
-    st.session_state.history = []
+# --- THEME SETTINGS ---
+themes = {
+    "Neon Blue": {"primary": "#00f2fe", "secondary": "#4facfe", "bg": "#0b0f19"},
+    "Cyberpunk Purple": {"primary": "#bc13fe", "secondary": "#ff00e6", "bg": "#120b19"},
+    "Matrix Green": {"primary": "#00ff41", "secondary": "#008f11", "bg": "#0b0f0b"},
+    "Sunset Orange": {"primary": "#f7971e", "secondary": "#ffd200", "bg": "#19130b"}
+}
 
 # Sidebar
 with st.sidebar:
+    st.title("⚙️ App Settings")
+    
+    # Theme Selector
+    selected_theme = st.selectbox("🎨 Select Theme Color:", list(themes.keys()))
+    t = themes[selected_theme]
+    
+    # Dynamic CSS based on Theme
+    st.markdown(f"""
+        <style>
+        .main {{background-color: {t['bg']}; color: #ffffff;}}
+        .stButton>button {{background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); color: black; font-weight: bold; border-radius: 8px; border: none; width: 100%; height: 45px;}}
+        .stTextInput>div>div>input {{background-color: #161b26; color: white; border: 1px solid {t['primary']}; border-radius: 8px;}}
+        .chat-box {{background-color: #161b26; padding: 15px; border-radius: 10px; border-left: 5px solid {t['primary']}; margin-bottom: 10px;}}
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
     st.title("📜 Lecture History")
     
-    if st.button("🆕 Start New Lecture", use_container_width=True):
-        st.session_state.history = []
-        st.rerun()
-        
+    # History Management
+    col_new, col_clear = st.columns(2)
+    with col_new:
+        if st.button("🆕 New", use_container_width=True):
+            st.session_state.history = []
+            st.rerun()
+    with col_clear:
+        if st.button("🗑️ Clear All", use_container_width=True):
+            st.session_state.history = []
+            st.rerun()
+            
     st.markdown("---")
     
     if st.session_state.history:
@@ -39,6 +57,10 @@ with st.sidebar:
             st.info(f"{idx+1}. {hist}")
     else:
         st.write("No previous lectures yet.")
+
+# Application States
+if "history" not in st.session_state:
+    st.session_state.history = []
 
 # --- ULTRA-REALISTIC EDGE-TTS VOICE FUNCTION ---
 def generate_voice(text, voice_code, filename):
@@ -61,7 +83,7 @@ def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
         
     payload = {
         "messages": [
-            {"role": "system", "content": "You are ChatGPT, an expert AI tutor. Answer strictly with clear, educational bullet points. Explain in very simple and easy words. DO NOT add greetings or filler words."},
+            {"role": "system", "content": "You are ChatGPT, an expert AI tutor. Answer strictly with clear, educational bullet points. Explain in very simple words. DO NOT add greetings or filler words."},
             {"role": "user", "content": user_content}
         ],
         "model": "openai",
@@ -92,7 +114,7 @@ st.title("🌟 Lectura AI Pro — Studio Dashboard")
 st.write("Powered by ChatGPT Brain & Ultra-Realistic Voice")
 
 # MODE SELECTION
-app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Instant Answers)", "🎬 Lecture Mode (Visual Simulation)"))
+app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Fast Answers)", "🎬 Lecture Mode (Visual Simulation)"))
 
 # Language Selection
 language_option = st.selectbox(
@@ -100,12 +122,11 @@ language_option = st.selectbox(
     ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic")
 )
 
-# Voice Codes for Edge-TTS (ChatGPT-like realistic voices)
 voice_codes = {
     "Roman Urdu": "ur-PK-UzmaNeural",
     "Urdu (اردو)": "ur-PK-AsadNeural",
     "Hindi (हिन्दी)": "hi-IN-SwaraNeural",
-    "English": "en-US-AriaNeural", # Aria is the famous ChatGPT-like voice
+    "English": "en-US-AriaNeural",
     "Arabic": "ar-SA-ZariyahNeural"
 }
 selected_voice_code = voice_codes[language_option]
@@ -144,8 +165,7 @@ if st.button("🚀 Generate Answer / Lecture"):
         if image_base64_str:
             prompt_text = (
                 f"Look at this image and explain the concept in very simple words. "
-                f"Give answer in structured bullet points. "
-                f"YOU MUST REPLY STRICTLY IN {language_option} LANGUAGE. "
+                f"Give answer in structured bullet points. YOU MUST REPLY STRICTLY IN {language_option} LANGUAGE. "
                 f"VERY IMPORTANT: On the very first line, write a short 1-sentence English description of this image for a visual generator. Start exactly with 'IMAGE_PROMPT: '. The rest is the explanation."
             )
             result = ask_chatgpt_brain(prompt_text, image_base64=image_base64_str, lang=language_option)
@@ -154,7 +174,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                 f"Explain this in very simple words with clear bullet points: {user_prompt}. "
                 f"YOU MUST REPLY STRICTLY IN {language_option} LANGUAGE."
             )
-            # If Lecture mode, ask for image prompt too
             if app_mode == "🎬 Lecture Mode (Visual Simulation)":
                  prompt_text += " VERY IMPORTANT: On the very first line, write a short 1-sentence English description of this topic for a visual generator. Start exactly with 'IMAGE_PROMPT: '. The rest is the script."
             
@@ -175,7 +194,7 @@ if st.button("🚀 Generate Answer / Lecture"):
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
-            # --- GENERATE ULTRA-REALISTIC VOICE ---
+            # --- GENERATE VOICE ---
             st.info(f"🎙️ Generating Realistic AI Voice in {language_option}...")
             try:
                 temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
@@ -190,7 +209,7 @@ if st.button("🚀 Generate Answer / Lecture"):
             # --- DISPLAY LAYOUT ---
             st.markdown("---")
             
-            # IF LECTURE MODE -> GENERATE 10 IMAGES
+            # IF LECTURE MODE -> GENERATE 10 IMAGES WITH SMOOTH TRANSITIONS
             if app_mode == "🎬 Lecture Mode (Visual Simulation)":
                 st.info("🎨 Generating 10 Visual Frames...")
                 time.sleep(2) 
@@ -208,13 +227,14 @@ if st.button("🚀 Generate Answer / Lecture"):
 
                 progress_bar.progress(100)
                 
-                st.subheader("🛸 AI Generated Video Simulation (10 Frames)")
+                st.subheader("🛸 AI Video Simulation (Smooth Playback)")
+                # Added fade animation to make it feel like a video
                 html_template = """
-                <div id="videoContainer" style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid #00f2fe; position: relative;">
-                    <img id="videoSlide" src="IMG1_URL" style="width: 100%; height: auto; border-radius: 8px; transition: opacity 0.8s ease-in-out;">
+                <div id="videoContainer" style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid PRIMARY_COLOR; position: relative;">
+                    <img id="videoSlide" src="IMG1_URL" style="width: 100%; height: auto; border-radius: 8px; opacity: 1; transition: opacity 1s ease-in-out;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                        <p style="color: #00f2fe; font-family: monospace; margin: 0;">▶ Playing Simulation... | Scene: <span id="frameNum">1</span>/10</p>
-                        <button onclick="toggleFullscreen()" style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: black; font-weight: bold; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">⛶ Fullscreen</button>
+                        <p style="color: PRIMARY_COLOR; font-family: monospace; margin: 0;">▶ Playing Simulation... | Scene: <span id="frameNum">1</span>/10</p>
+                        <button onclick="toggleFullscreen()" style="background: linear-gradient(135deg, PRIMARY_COLOR 0%, SECONDARY_COLOR 100%); color: black; font-weight: bold; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">⛶ Fullscreen</button>
                     </div>
                 </div>
                 <script>
@@ -223,10 +243,14 @@ if st.button("🚀 Generate Answer / Lecture"):
                     var imgElement = document.getElementById("videoSlide");
                     var frameNum = document.getElementById("frameNum");
                     setInterval(function() {
-                        current = (current + 1) % images.length;
-                        imgElement.src = images[current];
-                        frameNum.innerText = current + 1;
-                    }, 4000); 
+                        imgElement.style.opacity = 0;
+                        setTimeout(function() {
+                            current = (current + 1) % images.length;
+                            imgElement.src = images[current];
+                            frameNum.innerText = current + 1;
+                            imgElement.style.opacity = 1;
+                        }, 1000);
+                    }, 5000); 
                     
                     function toggleFullscreen() {
                         var elem = document.getElementById('videoContainer');
@@ -238,11 +262,14 @@ if st.button("🚀 Generate Answer / Lecture"):
                     }
                 </script>
                 """
-                final_html = html_template.replace("IMG1_URL", img1_url).replace("IMG2_URL", img2_url).replace("IMG3_URL", img3_url).replace("IMG4_URL", img4_url).replace("IMG5_URL", img5_url).replace("IMG6_URL", img6_url).replace("IMG7_URL", img7_url).replace("IMG8_URL", img8_url).replace("IMG9_URL", img9_url).replace("IMG10_URL", img10_url)
+                # Replace colors and URLs
+                final_html = html_template.replace("PRIMARY_COLOR", t['primary']).replace("SECONDARY_COLOR", t['secondary'])
+                final_html = final_html.replace("IMG1_URL", img1_url).replace("IMG2_URL", img2_url).replace("IMG3_URL", img3_url).replace("IMG4_URL", img4_url).replace("IMG5_URL", img5_url).replace("IMG6_URL", img6_url).replace("IMG7_URL", img7_url).replace("IMG8_URL", img8_url).replace("IMG9_URL", img9_url).replace("IMG10_URL", img10_url)
+                
                 st.components.v1.html(final_html, height=500)
                 st.markdown("---")
 
-            # IF Q&A MODE -> NO IMAGES, JUST FAST ANSWER
+            # IF Q&A MODE -> NO IMAGES
             else:
                 progress_bar.progress(100)
                 st.markdown("---")
@@ -251,6 +278,40 @@ if st.button("🚀 Generate Answer / Lecture"):
             with col1:
                 st.subheader(f"🎬 AI Answer ({language_option})")
                 st.write(voiceover_script)
+                
+                # --- DOWNLOAD & SHARE OPTIONS ---
+                st.markdown("### 📥 Save & Share Options")
+                dl_col1, dl_col2, dl_col3 = st.columns(3)
+                
+                with dl_col1:
+                    # Download Script as TXT
+                    st.download_button(
+                        label="📄 Download Script",
+                        data=voiceover_script,
+                        file_name="Lectura_AI_Script.txt",
+                        mime="text/plain"
+                    )
+                
+                with dl_col2:
+                    # Download Audio as MP3
+                    if temp_audio_path:
+                        with open(temp_audio_path, "rb") as f:
+                            audio_bytes = f.read()
+                        st.download_button(
+                            label="🎧 Download Audio",
+                            data=audio_bytes,
+                            file_name="Lectura_AI_Voice.mp3",
+                            mime="audio/mp3"
+                        )
+                
+                with dl_col3:
+                    # Copy to Clipboard (Using simple JS hack)
+                    if st.button("📋 Copy Text"):
+                        st.markdown(
+                            f"""<script>navigator.clipboard.writeText(`{voiceover_script.replace('`', "'")}`);</script>""",
+                            unsafe_allow_html=True
+                        )
+                        st.success("Text Copied!")
 
             with col2:
                 st.subheader("🎙️ Ultra-Realistic AI Voice")
@@ -261,8 +322,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                 follow_up = st.text_input("Ask a question:", key="follow_up_input")
                 if follow_up:
                     chat_result = ask_chatgpt_brain(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
-                    
-                    # Auto-voice for follow-up
                     temp_chat_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                     generate_voice(chat_result, selected_voice_code, temp_chat_audio.name)
                     
