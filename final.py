@@ -4,7 +4,7 @@ import requests
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
 
-# Custom Dark Neon CSS
+# Custom Dark Neon CSS - Typing mistake fixed here
 st.markdown("""
     <style>
     .main {background-color: #0b0f19; color: #ffffff;}
@@ -12,7 +12,7 @@ st.markdown("""
     .stTextInput>div>div>input {background-color: #161b26; color: white; border: 1px solid #00f2fe; border-radius: 8px;}
     .chat-box {background-color: #161b26; padding: 15px; border-radius: 10px; border-left: 5px solid #00f2fe; margin-bottom: 10px;}
     </style>
-""", unsafe_allow_index=True)
+""", unsafe_allow_html=True)
 
 # Application States for Chat and History
 if "history" not in st.session_state: st.session_state.history = []
@@ -41,7 +41,6 @@ if st.button("Launch Professional 3D Simulation Suite"):
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
     
     try:
-        # Safe JSON Payload System - No long URL error possible
         url = "https://pollinations.ai"
         system_msg = "Create a short professional 45-second educational video script. Output plain text. Structure with clear titles: 'VISUAL CONCEPT' and 'VOICEOVER DIALOGUE'."
         
@@ -62,7 +61,7 @@ if st.button("Launch Professional 3D Simulation Suite"):
             st.success("✨ Phase 1 & 2: Neural Script & Visual Blueprint Compiled!")
             
             # Layout Columns for Professional Look (Side-by-Side Content)
-            col1, col2 = st.columns([1, 1])
+            col1, col2 = st.columns(2)
             
             with col1:
                 st.subheader("🎬 AI Visual Description & Script")
