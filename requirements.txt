@@ -1,7 +1,2 @@
-# 1. Requirements file banao
-echo "streamlit
-requests" > requirements.txt
-
-# 2. Streamlit Cloud pe deploy karo
-# GitHub pe final.py aur requirements.txt push karo
-# Streamlit Cloud se connect karo
+streamlit
+requests
