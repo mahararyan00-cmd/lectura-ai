@@ -4,7 +4,7 @@ import requests
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
 
-# Custom Dark Neon CSS - Typing mistake fixed here
+# Custom Dark Neon CSS
 st.markdown("""
     <style>
     .main {background-color: #0b0f19; color: #ffffff;}
@@ -41,19 +41,10 @@ if st.button("Launch Professional 3D Simulation Suite"):
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
     
     try:
-        url = "https://pollinations.ai"
-        system_msg = "Create a short professional 45-second educational video script. Output plain text. Structure with clear titles: 'VISUAL CONCEPT' and 'VOICEOVER DIALOGUE'."
+        # Timeout ko khatam karne ke liye hum direct fast parameter bhejenge
+        url = f"https://pollinations.ai{requests.utils.quote(user_prompt)}?model=searchgpt"
         
-        payload = {
-            "messages": [
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": user_prompt}
-            ],
-            "model": "openai",
-            "private": True
-        }
-        
-        response = requests.post(url, json=payload)
+        response = requests.get(url)
         result = response.text
         
         if result:
