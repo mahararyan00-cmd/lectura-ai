@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import json
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
@@ -15,7 +16,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Application States for Chat and History
-if "history" not in st.session_state: st.session_state.history = []
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "chat_log" not in st.session_state:
+    st.session_state.chat_log = []
 
 # Sidebar for Lecture History Tab
 with st.sidebar:
@@ -26,52 +30,90 @@ with st.sidebar:
     else:
         st.write("No previous lectures yet.")
 
+# ============================================================
+# CORRECT POLLINATIONS API FUNCTION (YEH MAIN FIX HAI)
+# ============================================================
+def ask_pollinations(prompt_text):
+    """
+    Pollinations AI ko sahi tarika se call karta hai.
+    POST request use karte hain taake prompt properly bhej sakein.
+    """
+    url = "https://text.pollinations.ai/"
+    
+    # Yeh POST request hai - prompt body mein jaayega, URL mein nahi
+    payload = {
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an expert educational scriptwriter. Create detailed, engaging educational content."
+            },
+            {
+                "role": "user",
+                "content": prompt_text
+            }
+        ],
+        "model": "openai",
+        "seed": 42
+    }
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.post(url, json=payload, headers=headers, timeout=60)
+    
+    if response.status_code == 200:
+        return response.text
+    else:
+        raise Exception(f"API Error {response.status_code}: {response.text[:200]}")
+
+
 # Main Application Layout
 st.title("🌟 Lectura AI Pro — Studio Dashboard")
 st.write("Professional Prompt-to-3D Educational Suite")
 
 # Main Input Form
-user_prompt = st.text_input("What scientific topic do you want to animate?", "Explain how bees make honey in 3D animation")
+user_prompt = st.text_input(
+    "What scientific topic do you want to animate?",
+    "Explain how bees make honey in 3D animation"
+)
 
 if st.button("Launch Professional 3D Simulation Suite"):
     if user_prompt not in st.session_state.history:
         st.session_state.history.append(user_prompt)
-        
+
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
-    
+
     try:
-        # Prompt text ko theek kiya gaya hai
-        prompt_text = f"Create a short 45-second educational video script about {user_prompt}. Divide it into VISUAL CONCEPT and VOICEOVER DIALOGUE."
-        
-        # Sahi API URL aur POST method ka data payload setup
-        url = "https://pollinations.ai"
-        payload = {
-            "messages": [
-                {"role": "user", "content": prompt_text}
-            ],
-            "model": "openai",
-            "private": True
-        }
-        
-        # POST request taake lambay prompt par error na aaye
-        response = requests.post(url, json=payload, timeout=30)
-        result = response.text
-        
-        if response.status_code == 200 and result and "Failed to parse" not in result:
+        # ============================================================
+        # SAHI PROMPT - Short aur clear
+        # ============================================================
+        prompt_text = (
+            f"Create a short 45-second educational video script about: {user_prompt}. "
+            f"Divide your response into two clear sections:\n"
+            f"1. VISUAL CONCEPT: Describe what the 3D animation should show\n"
+            f"2. VOICEOVER DIALOGUE: Write the narration text\n"
+            f"Keep it concise and educational."
+        )
+
+        # SAHI API CALL - POST request use karo
+        result = ask_pollinations(prompt_text)
+
+        if result and len(result.strip()) > 10:
             st.success("✨ Phase 1 & 2: Neural Script & Visual Blueprint Compiled!")
-            
-            # Layout Columns for Professional Look (Side-by-Side Content)
+
+            # Layout Columns for Professional Look
             col1, col2 = st.columns(2)
-            
+
             with col1:
                 st.subheader("🎬 AI Visual Description & Script")
                 st.write(result)
-                
+
                 # Active Media Controllers
                 st.subheader("🎙️ Voiceover Audio Track")
-                st.audio("https://soundhelix.com", format="audio/mp3")
+                st.audio("https://soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format="audio/mp3")
                 st.button("📥 Download Full MP3 Lecture Voiceover", key="dl_btn")
-            
+
             with col2:
                 st.subheader("🛸 Real-time 3D Engine Simulation View")
                 html_code = f"""
@@ -84,19 +126,32 @@ if st.button("Launch Professional 3D Simulation Suite"):
                 </div>
                 """
                 st.components.v1.html(html_code, height=260)
-                
+
                 # Continue Lecture Feature: Live Q&A Box
                 st.subheader("💬 Continue Lecture (Ask Mid-Video Questions)")
-                follow_up = st.text_input("Got a question during the animation? Ask here instantly:", key="follow_up_input")
+                follow_up = st.text_input(
+                    "Got a question during the animation? Ask here instantly:",
+                    key="follow_up_input"
+                )
                 if follow_up:
                     st.info("Analyzing context against current visual matrix...")
-                    chat_payload = {
-                        "messages": [{"role": "user", "content": follow_up}],
-                        "model": "openai"
-                    }
-                    chat_res = requests.post(url, json=chat_payload).text
-                    st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI Assistant:</b> {chat_res}</div>", unsafe_allow_html=True)
+                    try:
+                        chat_result = ask_pollinations(
+                            f"About the topic '{user_prompt}', answer this question briefly: {follow_up}"
+                        )
+                        st.markdown(
+                            f"<div class='chat-box'><b>You:</b> {follow_up}<br><br>"
+                            f"<b>Lectura AI Assistant:</b> {chat_result}</div>",
+                            unsafe_allow_html=True
+                        )
+                    except Exception as chat_err:
+                        st.error(f"Chat Error: {chat_err}")
         else:
-            st.error("Engine temporary busy. Re-firing vectors...")
+            st.error("⚠️ AI returned empty response. Please try again.")
+
+    except requests.exceptions.Timeout:
+        st.error("⏱️ Request timed out. Server is busy — please try again in 30 seconds.")
+    except requests.exceptions.ConnectionError:
+        st.error("🔌 Connection failed. Check your internet connection.")
     except Exception as e:
         st.error(f"Execution Error: {e}")
