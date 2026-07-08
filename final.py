@@ -45,6 +45,13 @@ with st.sidebar:
     st.markdown("---")
     st.title("📜 Lecture History")
     
+    # NEW LECTURE BUTTON ADDED BACK
+    if st.button("🆕 Start New Lecture", use_container_width=True):
+        st.session_state.history = []
+        safe_rerun()
+        
+    st.markdown("---")
+    
     if "history" not in st.session_state:
         st.session_state.history = []
 
@@ -150,14 +157,20 @@ if st.button("🚀 Generate Answer / Lecture"):
 
     progress_bar = st.progress(0)
     
-    # --- PREPARE DATA ---
+    # --- PREPARE DATA (IMAGE ERROR FIXED HERE) ---
     image_base64_str = None
     if uploaded_file is not None:
-        img = Image.open(uploaded_file)
-        buf = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-        img.save(buf, format="JPEG")
-        with open(buf.name, "rb") as f:
-            image_base64_str = base64.b64encode(f.read()).decode('utf-8')
+        try:
+            img = Image.open(uploaded_file)
+            # Fix: Convert RGBA/PNG to RGB so it saves perfectly as JPEG
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            buf = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+            img.save(buf.name, format="JPEG") # Save to path instead of file object
+            with open(buf.name, "rb") as f:
+                image_base64_str = base64.b64encode(f.read()).decode('utf-8')
+        except Exception as e:
+            st.error(f"Image processing error: {e}")
 
     # --- GENERATE SCRIPT ---
     st.info("⚡ ChatGPT Brain is thinking...")
@@ -173,7 +186,7 @@ if st.button("🚀 Generate Answer / Lecture"):
         )
         
         if image_base64_str:
-            prompt_text = f"Look at this image. {base_prompt}"
+            prompt_text = f"Look at this image carefully. {base_prompt}"
             result = ask_chatgpt_brain(prompt_text, image_base64=image_base64_str, lang=language_option)
         else:
             result = ask_chatgpt_brain(base_prompt, lang=language_option)
