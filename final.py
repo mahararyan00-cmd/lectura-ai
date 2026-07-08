@@ -60,7 +60,7 @@ language_option = st.selectbox(
 
 # Language mapping for gTTS
 lang_codes = {
-    "Roman Urdu": "ur",  # Urdu accent mein Roman padhega
+    "Roman Urdu": "ur",
     "Urdu (اردو)": "ur",
     "Hindi (हिन्दी)": "hi",
     "English": "en",
@@ -78,10 +78,9 @@ if st.button("Launch Professional 3D Simulation Suite"):
     
     # --- STEP 1: Generate Script & English Image Keyword ---
     st.info("⚡ Phase 1: Compiling Neural Script & Visual Keywords...")
-    progress_bar.progress(20)
+    progress_bar.progress(10)
     
     try:
-        # Hum AI se ek sath script AUR English image keyword mangwayenge
         prompt_text = (
             f"Create a concise educational voiceover script about: {user_prompt}. "
             f"Include ONLY important facts and key educational points. "
@@ -91,8 +90,7 @@ if st.button("Launch Professional 3D Simulation Suite"):
         result = ask_pollinations(prompt_text)
         
         if result and len(result.strip()) > 10:
-            # Extract English Image Keyword from AI response
-            image_keyword = user_prompt # Default fallback
+            image_keyword = user_prompt 
             voiceover_script = result
             
             if "IMAGE_PROMPT:" in result:
@@ -100,26 +98,30 @@ if st.button("Launch Professional 3D Simulation Suite"):
                 for line in lines:
                     if line.strip().startswith("IMAGE_PROMPT:"):
                         image_keyword = line.replace("IMAGE_PROMPT:", "").strip()
-                        # Remove this line from voiceover so AI doesn't read it aloud
                         voiceover_script = result.replace(line, "").strip()
                         break
 
-            progress_bar.progress(40)
+            progress_bar.progress(30)
             st.success("✨ Phase 1 Complete: Script Compiled!")
             
-            # --- STEP 2: Generate 5 AI Images using ENGLISH keyword ---
-            st.info("🎨 Phase 2: Generating 5 AI Visual Frames (English Translation used for accuracy)...")
+            # --- STEP 2: Generate 10 AI Images ---
+            st.info("🎨 Phase 2: Generating 10 AI Visual Frames (This may take a moment)...")
             time.sleep(2) 
             
-            # Ab images image_keyword (English) se banengi, galat nahi hongi!
-            img1_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 1 introduction overview 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=1"
-            img2_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 2 initial stage process 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=2"
-            img3_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 3 middle stage mechanism 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=3"
-            img4_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 4 climax main action 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=4"
-            img5_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 5 final result conclusion 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=5"
+            # 10 Scenes banaye hain
+            img1_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 1 introduction overview 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=1"
+            img2_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 2 initial stage 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=2"
+            img3_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 3 early process 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=3"
+            img4_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 4 middle mechanism 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=4"
+            img5_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 5 core action 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=5"
+            img6_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 6 ongoing process 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=6"
+            img7_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 7 detailed closeup 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=7"
+            img8_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 8 near completion 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=8"
+            img9_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 9 final result 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=9"
+            img10_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 10 ultimate conclusion 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed=10"
 
             progress_bar.progress(70)
-            st.success("✨ Phase 2 Complete: 5 Visual Frames Rendered!")
+            st.success("✨ Phase 2 Complete: 10 Visual Frames Rendered!")
             
             # --- STEP 3: Generate Voice ---
             st.info(f"🎙️ Phase 3: Synthesizing AI Voiceover in {language_option}...")
@@ -137,15 +139,18 @@ if st.button("Launch Professional 3D Simulation Suite"):
             # --- DISPLAY LAYOUT ---
             st.markdown("---")
             
-            # AI VIDEO PLAYER
-            st.subheader("🛸 AI Generated Video Simulation (5 Frames)")
+            # AI VIDEO PLAYER WITH FULLSCREEN BUTTON
+            st.subheader("🛸 AI Generated Video Simulation (10 Frames)")
             video_player_html = f"""
-            <div style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid #00f2fe;">
+            <div id="videoContainer" style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid #00f2fe; position: relative;">
                 <img id="videoSlide" src="{img1_url}" style="width: 100%; height: auto; border-radius: 8px; transition: opacity 0.8s ease-in-out;">
-                <p style="color: #00f2fe; font-family: monospace; margin-top: 5px;">▶ Playing Simulation... | Scene: <span id="frameNum">1</span>/5</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <p style="color: #00f2fe; font-family: monospace; margin: 0;">▶ Playing Simulation... | Scene: <span id="frameNum">1</span>/10</p>
+                    <button onclick="toggleFullscreen()" style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: black; font-weight: bold; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">⛶ Fullscreen</button>
+                </div>
             </div>
             <script>
-                var images = ["{img1_url}", "{img2_url}", "{img3_url}", "{img4_url}", "{img5_url}"];
+                var images = ["{img1_url}", "{img2_url}", "{img3_url}", "{img4_url}", "{img5_url}", "{img6_url}", "{img7_url}", "{img8_url}", "{img9_url}", "{img10_url}"];
                 var current = 0;
                 var imgElement = document.getElementById("videoSlide");
                 var frameNum = document.getElementById("frameNum");
@@ -153,10 +158,25 @@ if st.button("Launch Professional 3D Simulation Suite"):
                     current = (current + 1) % images.length;
                     imgElement.src = images[current];
                     frameNum.innerText = current + 1;
-                }}, 3000);
+                }}, 4000); // Change image every 4 seconds for better viewing
+                
+                function toggleFullscreen() {{
+                    var elem = document.getElementById('videoContainer');
+                    if (!document.fullscreenElement) {{
+                        if (elem.requestFullscreen) {{
+                            elem.requestFullscreen();
+                        }} else if (elem.webkitRequestFullscreen) {{ /* Safari */
+                            elem.webkitRequestFullscreen();
+                        }}
+                    }} else {{
+                        if (document.exitFullscreen) {{
+                            document.exitFullscreen();
+                        }}
+                    }}
+                }}
             </script>
             """
-            st.components.v1.html(video_player_html, height=450)
+            st.components.v1.html(video_player_html, height=500)
 
             st.markdown("---")
             col1, col2 = st.columns(2)
