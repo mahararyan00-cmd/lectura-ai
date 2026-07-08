@@ -12,11 +12,19 @@ st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
 
 # --- THEME SETTINGS ---
 themes = {
+    "Royal Blue": {"primary": "#4169E1", "secondary": "#1E90FF", "bg": "#050A30"},
     "Neon Blue": {"primary": "#00f2fe", "secondary": "#4facfe", "bg": "#0b0f19"},
     "Cyberpunk Purple": {"primary": "#bc13fe", "secondary": "#ff00e6", "bg": "#120b19"},
     "Matrix Green": {"primary": "#00ff41", "secondary": "#008f11", "bg": "#0b0f0b"},
     "Sunset Orange": {"primary": "#f7971e", "secondary": "#ffd200", "bg": "#19130b"}
 }
+
+# Safe Rerun Function (Fixes AttributeError)
+def safe_rerun():
+    try:
+        st.rerun()
+    except AttributeError:
+        st.experimental_rerun()
 
 # Sidebar
 with st.sidebar:
@@ -26,10 +34,10 @@ with st.sidebar:
     selected_theme = st.selectbox("🎨 Select Theme Color:", list(themes.keys()))
     t = themes[selected_theme]
     
-    # Dynamic CSS based on Theme
+    # Dynamic CSS (Stronger background fix)
     st.markdown(f"""
         <style>
-        .main {{background-color: {t['bg']}; color: #ffffff;}}
+        [data-testid="stAppViewContainer"], .stApp {{background-color: {t['bg']} !important; color: #ffffff !important;}}
         .stButton>button {{background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); color: black; font-weight: bold; border-radius: 8px; border: none; width: 100%; height: 45px;}}
         .stTextInput>div>div>input {{background-color: #161b26; color: white; border: 1px solid {t['primary']}; border-radius: 8px;}}
         .chat-box {{background-color: #161b26; padding: 15px; border-radius: 10px; border-left: 5px solid {t['primary']}; margin-bottom: 10px;}}
@@ -39,26 +47,25 @@ with st.sidebar:
     st.markdown("---")
     st.title("📜 Lecture History")
     
-    # History Management
-    col_new, col_clear = st.columns(2)
-    with col_new:
-        if st.button("🆕 New", use_container_width=True):
-            st.session_state.history = []
-            st.rerun()
-    with col_clear:
-        if st.button("🗑️ Clear All", use_container_width=True):
-            st.session_state.history = []
-            st.rerun()
-            
-    st.markdown("---")
-    
+    # Individual Delete Option for Chats
+    if "history" not in st.session_state:
+        st.session_state.history = []
+
     if st.session_state.history:
         for idx, hist in enumerate(st.session_state.history):
-            st.info(f"{idx+1}. {hist}")
+            col1, col2 = st.columns([5, 1])
+            with col1:
+                # Show only first 30 characters of the chat
+                st.info(f"📝 {hist[:30]}...")
+            with col2:
+                # Delete button for each chat
+                if st.button("❌", key=f"del_{idx}"):
+                    del st.session_state.history[idx]
+                    safe_rerun()
     else:
         st.write("No previous lectures yet.")
 
-# Application States
+# Application States Initialization
 if "history" not in st.session_state:
     st.session_state.history = []
 
@@ -228,7 +235,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                 progress_bar.progress(100)
                 
                 st.subheader("🛸 AI Video Simulation (Smooth Playback)")
-                # Added fade animation to make it feel like a video
                 html_template = """
                 <div id="videoContainer" style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid PRIMARY_COLOR; position: relative;">
                     <img id="videoSlide" src="IMG1_URL" style="width: 100%; height: auto; border-radius: 8px; opacity: 1; transition: opacity 1s ease-in-out;">
@@ -284,7 +290,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                 dl_col1, dl_col2, dl_col3 = st.columns(3)
                 
                 with dl_col1:
-                    # Download Script as TXT
                     st.download_button(
                         label="📄 Download Script",
                         data=voiceover_script,
@@ -293,7 +298,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                     )
                 
                 with dl_col2:
-                    # Download Audio as MP3
                     if temp_audio_path:
                         with open(temp_audio_path, "rb") as f:
                             audio_bytes = f.read()
@@ -305,7 +309,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                         )
                 
                 with dl_col3:
-                    # Copy to Clipboard (Using simple JS hack)
                     if st.button("📋 Copy Text"):
                         st.markdown(
                             f"""<script>navigator.clipboard.writeText(`{voiceover_script.replace('`', "'")}`);</script>""",
