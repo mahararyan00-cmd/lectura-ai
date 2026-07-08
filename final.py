@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import tempfile
 from gtts import gTTS
-from langdetect import detect
 import time
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
@@ -36,7 +35,7 @@ def ask_pollinations(prompt_text):
     url = "https://text.pollinations.ai/"
     payload = {
         "messages": [
-            {"role": "system", "content": "You are a strict educational AI. Provide ONLY to-the-point factual bullet points. DO NOT add any greetings, conclusions, or filler words. Just the facts."},
+            {"role": "system", "content": "You are a strict educational AI. Provide ONLY to-the-point factual bullet points. DO NOT add any greetings, conclusions, or filler words."},
             {"role": "user", "content": prompt_text}
         ],
         "model": "openai",
@@ -51,9 +50,25 @@ def ask_pollinations(prompt_text):
 
 # Main Layout
 st.title("🌟 Lectura AI Pro — Studio Dashboard")
-st.write("Professional Prompt-to-3D Educational Suite (Auto Multi-Language)")
+st.write("Professional Prompt-to-3D Educational Suite (Multi-Language)")
 
-user_prompt = st.text_input("What scientific topic do you want to animate? (Ask in any language)", "شہد کیسے بنتا ہے؟")
+# Language Selection Dropdown
+language_option = st.selectbox(
+    "🎙️ Select Voiceover Language:",
+    ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic")
+)
+
+# Language mapping for gTTS
+lang_codes = {
+    "Roman Urdu": "ur",  # Urdu accent mein Roman padhega
+    "Urdu (اردو)": "ur",
+    "Hindi (हिन्दी)": "hi",
+    "English": "en",
+    "Arabic": "ar"
+}
+selected_lang_code = lang_codes[language_option]
+
+user_prompt = st.text_input("What scientific topic do you want to animate?", "honey kaise banta hai")
 
 if st.button("Launch Professional 3D Simulation Suite"):
     if user_prompt not in st.session_state.history:
@@ -61,52 +76,56 @@ if st.button("Launch Professional 3D Simulation Suite"):
 
     progress_bar = st.progress(0)
     
-    # --- AUTO DETECT LANGUAGE ---
-    try:
-        detected_lang = detect(user_prompt)
-    except:
-        detected_lang = 'en'
-        
-    # Language names for display and gTTS mapping
-    lang_names = {'ur': 'Urdu', 'hi': 'Hindi', 'en': 'English', 'ar': 'Arabic', 'es': 'Spanish', 'fr': 'French'}
-    current_lang_name = lang_names.get(detected_lang, 'English')
-    
-    st.info(f"🌐 Detected Language: **{current_lang_name}** — System will respond in this language!")
-
-    # --- STEP 1: Generate Text Script ---
+    # --- STEP 1: Generate Script & English Image Keyword ---
+    st.info("⚡ Phase 1: Compiling Neural Script & Visual Keywords...")
     progress_bar.progress(20)
     
     try:
+        # Hum AI se ek sath script AUR English image keyword mangwayenge
         prompt_text = (
             f"Create a concise educational voiceover script about: {user_prompt}. "
             f"Include ONLY important facts and key educational points. "
-            f"YOU MUST REPLY STRICTLY IN {current_lang_name} LANGUAGE."
+            f"YOU MUST REPLY STRICTLY IN {language_option} LANGUAGE. "
+            f"VERY IMPORTANT: On the very first line of your response, write a short 1-sentence English description of this topic for an image generator. Start that line exactly with 'IMAGE_PROMPT: '. The rest of the response must be the voiceover script."
         )
         result = ask_pollinations(prompt_text)
         
         if result and len(result.strip()) > 10:
+            # Extract English Image Keyword from AI response
+            image_keyword = user_prompt # Default fallback
+            voiceover_script = result
+            
+            if "IMAGE_PROMPT:" in result:
+                lines = result.split('\n')
+                for line in lines:
+                    if line.strip().startswith("IMAGE_PROMPT:"):
+                        image_keyword = line.replace("IMAGE_PROMPT:", "").strip()
+                        # Remove this line from voiceover so AI doesn't read it aloud
+                        voiceover_script = result.replace(line, "").strip()
+                        break
+
             progress_bar.progress(40)
             st.success("✨ Phase 1 Complete: Script Compiled!")
             
-            # --- STEP 2: Generate 5 AI Images ---
+            # --- STEP 2: Generate 5 AI Images using ENGLISH keyword ---
+            st.info("🎨 Phase 2: Generating 5 AI Visual Frames (English Translation used for accuracy)...")
             time.sleep(2) 
             
-            img1_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 1 introduction overview 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=1"
-            img2_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 2 initial stage process 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=2"
-            img3_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 3 middle stage mechanism 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=3"
-            img4_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 4 climax main action 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=4"
-            img5_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(user_prompt + ' scene 5 final result conclusion 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=5"
+            # Ab images image_keyword (English) se banengi, galat nahi hongi!
+            img1_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 1 introduction overview 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=1"
+            img2_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 2 initial stage process 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=2"
+            img3_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 3 middle stage mechanism 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=3"
+            img4_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 4 climax main action 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=4"
+            img5_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + ' scene 5 final result conclusion 3D realistic educational cinematic')}?width=768&height=512&nologo=true&seed=5"
 
             progress_bar.progress(70)
             st.success("✨ Phase 2 Complete: 5 Visual Frames Rendered!")
             
             # --- STEP 3: Generate Voice ---
-            # Map detected language code to gTTS supported codes
-            # (Hindi and Urdu both work great in gTTS)
-            gtts_lang_code = detected_lang if detected_lang in ['ur', 'hi', 'en', 'ar', 'es', 'fr'] else 'en'
+            st.info(f"🎙️ Phase 3: Synthesizing AI Voiceover in {language_option}...")
             
             try:
-                tts = gTTS(text=result, lang=gtts_lang_code, slow=False)
+                tts = gTTS(text=voiceover_script, lang=selected_lang_code, slow=False)
                 temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                 tts.save(temp_audio.name)
                 progress_bar.progress(100)
@@ -143,8 +162,8 @@ if st.button("Launch Professional 3D Simulation Suite"):
             col1, col2 = st.columns(2)
 
             with col1:
-                st.subheader(f"🎬 AI Voiceover Script ({current_lang_name})")
-                st.write(result)
+                st.subheader(f"🎬 AI Voiceover Script ({language_option})")
+                st.write(voiceover_script)
 
             with col2:
                 st.subheader("🎙️ AI Voiceover Audio Track")
@@ -153,11 +172,11 @@ if st.button("Launch Professional 3D Simulation Suite"):
                 else:
                     st.audio("https://soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format="audio/mp3")
                 
-                # Chat Feature (Auto language)
+                # Chat Feature
                 st.subheader("💬 Continue Lecture")
                 follow_up = st.text_input("Ask a question:", key="follow_up_input")
                 if follow_up:
-                    chat_result = ask_pollinations(f"About '{user_prompt}', answer briefly in {current_lang_name}: {follow_up}")
+                    chat_result = ask_pollinations(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI:</b> {chat_result}</div>", unsafe_allow_html=True)
         else:
             st.error("⚠️ AI returned empty response. Try again.")
