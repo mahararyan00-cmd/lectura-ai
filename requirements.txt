@@ -1,5 +1,5 @@
 streamlit
 requests
-gTTS
+edge-tts
 Pillow
-openai
+asyncio
