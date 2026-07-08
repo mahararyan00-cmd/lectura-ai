@@ -19,7 +19,7 @@ themes = {
     "Sunset Orange": {"primary": "#f7971e", "secondary": "#ffd200", "bg": "#19130b"}
 }
 
-# Safe Rerun Function (Fixes AttributeError)
+# Safe Rerun Function
 def safe_rerun():
     try:
         st.rerun()
@@ -30,11 +30,9 @@ def safe_rerun():
 with st.sidebar:
     st.title("⚙️ App Settings")
     
-    # Theme Selector
     selected_theme = st.selectbox("🎨 Select Theme Color:", list(themes.keys()))
     t = themes[selected_theme]
     
-    # Dynamic CSS (Stronger background fix)
     st.markdown(f"""
         <style>
         [data-testid="stAppViewContainer"], .stApp {{background-color: {t['bg']} !important; color: #ffffff !important;}}
@@ -47,7 +45,6 @@ with st.sidebar:
     st.markdown("---")
     st.title("📜 Lecture History")
     
-    # Individual Delete Option for Chats
     if "history" not in st.session_state:
         st.session_state.history = []
 
@@ -55,17 +52,14 @@ with st.sidebar:
         for idx, hist in enumerate(st.session_state.history):
             col1, col2 = st.columns([5, 1])
             with col1:
-                # Show only first 30 characters of the chat
                 st.info(f"📝 {hist[:30]}...")
             with col2:
-                # Delete button for each chat
                 if st.button("❌", key=f"del_{idx}"):
                     del st.session_state.history[idx]
                     safe_rerun()
     else:
         st.write("No previous lectures yet.")
 
-# Application States Initialization
 if "history" not in st.session_state:
     st.session_state.history = []
 
@@ -90,7 +84,7 @@ def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
         
     payload = {
         "messages": [
-            {"role": "system", "content": "You are ChatGPT, an expert AI tutor. Answer strictly with clear, educational bullet points. Explain in very simple words. DO NOT add greetings or filler words."},
+            {"role": "system", "content": "You are ChatGPT, an expert AI tutor. You MUST follow the exact output format requested. Explain in very simple words. DO NOT add greetings or filler words."},
             {"role": "user", "content": user_content}
         ],
         "model": "openai",
@@ -169,39 +163,60 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar.progress(20)
     
     try:
+        # NEW ADVANCED PROMPT FOR EXAM HEADINGS + SCRIPT SEPARATION
+        base_prompt = (
+            f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
+            f"FORMAT RULES (FOLLOW EXACTLY):\n"
+            f"1. First line must start with 'IMAGE_PROMPT: ' followed by a 1-sentence English visual description.\n"
+            f"2. Next line must be '=== EXAM HEADINGS ==='. Under this, list 3-5 key exam topic headings (short bullet points).\n"
+            f"3. Next line must be '=== VOICEOVER SCRIPT ==='. Under this, write the detailed educational explanation in simple words.\n"
+        )
+        
         if image_base64_str:
-            prompt_text = (
-                f"Look at this image and explain the concept in very simple words. "
-                f"Give answer in structured bullet points. YOU MUST REPLY STRICTLY IN {language_option} LANGUAGE. "
-                f"VERY IMPORTANT: On the very first line, write a short 1-sentence English description of this image for a visual generator. Start exactly with 'IMAGE_PROMPT: '. The rest is the explanation."
-            )
+            prompt_text = f"Look at this image. {base_prompt}"
             result = ask_chatgpt_brain(prompt_text, image_base64=image_base64_str, lang=language_option)
         else:
-            prompt_text = (
-                f"Explain this in very simple words with clear bullet points: {user_prompt}. "
-                f"YOU MUST REPLY STRICTLY IN {language_option} LANGUAGE."
-            )
-            if app_mode == "🎬 Lecture Mode (Visual Simulation)":
-                 prompt_text += " VERY IMPORTANT: On the very first line, write a short 1-sentence English description of this topic for a visual generator. Start exactly with 'IMAGE_PROMPT: '. The rest is the script."
-            
-            result = ask_chatgpt_brain(prompt_text, lang=language_option)
+            result = ask_chatgpt_brain(base_prompt, lang=language_option)
         
         if result and len(result.strip()) > 10:
+            # --- PARSING LOGIC ---
             image_keyword = user_prompt 
+            exam_headings = ""
             voiceover_script = result
             
+            # Extract Image Prompt
             if "IMAGE_PROMPT:" in result:
                 lines = result.split('\n')
                 for line in lines:
                     if line.strip().startswith("IMAGE_PROMPT:"):
                         image_keyword = line.replace("IMAGE_PROMPT:", "").strip()
-                        voiceover_script = result.replace(line, "").strip()
+                        voiceover_script = voiceover_script.replace(line, "").strip()
                         break
+            
+            # Extract Exam Headings
+            if "=== EXAM HEADINGS ===" in voiceover_script:
+                parts = voiceover_script.split("=== EXAM HEADINGS ===")
+                if "=== VOICEOVER SCRIPT ===" in parts[1]:
+                    sub_parts = parts[1].split("=== VOICEOVER SCRIPT ===")
+                    exam_headings = sub_parts[0].strip()
+                    voiceover_script = sub_parts[1].strip()
+                else:
+                    exam_headings = parts[1].strip()
+                    
+            # Fallback if AI misses the tags
+            elif "=== VOICEOVER SCRIPT ===" in voiceover_script:
+                voiceover_script = voiceover_script.split("=== VOICEOVER SCRIPT ===")[1].strip()
+
+            # If AI completely failed to separate, use whole text for voice
+            if not exam_headings:
+                exam_headings = "Headings not generated. Please check the script."
+            if not voiceover_script:
+                voiceover_script = result
 
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
-            # --- GENERATE VOICE ---
+            # --- GENERATE VOICE (ONLY FOR VOICEOVER SCRIPT) ---
             st.info(f"🎙️ Generating Realistic AI Voice in {language_option}...")
             try:
                 temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
@@ -216,7 +231,17 @@ if st.button("🚀 Generate Answer / Lecture"):
             # --- DISPLAY LAYOUT ---
             st.markdown("---")
             
-            # IF LECTURE MODE -> GENERATE 10 IMAGES WITH SMOOTH TRANSITIONS
+            # --- EXAM HEADINGS SECTION (Beautiful UI Box) ---
+            st.markdown(f"""
+                <div style="background-color: #161b26; padding: 25px; border-radius: 12px; border: 2px solid {t['primary']}; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.5);">
+                    <h3 style="color: {t['primary']}; margin-top:0; border-bottom: 1px solid #333; padding-bottom:10px;">🎓 Exam Preparation Headings</h3>
+                    <p style="font-size: 17px; color: #ffffff; line-height: 1.6;">
+                    {exam_headings.replace(chr(10), '<br>')}
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # IF LECTURE MODE -> GENERATE 10 IMAGES
             if app_mode == "🎬 Lecture Mode (Visual Simulation)":
                 st.info("🎨 Generating 10 Visual Frames...")
                 time.sleep(2) 
@@ -268,21 +293,19 @@ if st.button("🚀 Generate Answer / Lecture"):
                     }
                 </script>
                 """
-                # Replace colors and URLs
                 final_html = html_template.replace("PRIMARY_COLOR", t['primary']).replace("SECONDARY_COLOR", t['secondary'])
                 final_html = final_html.replace("IMG1_URL", img1_url).replace("IMG2_URL", img2_url).replace("IMG3_URL", img3_url).replace("IMG4_URL", img4_url).replace("IMG5_URL", img5_url).replace("IMG6_URL", img6_url).replace("IMG7_URL", img7_url).replace("IMG8_URL", img8_url).replace("IMG9_URL", img9_url).replace("IMG10_URL", img10_url)
                 
                 st.components.v1.html(final_html, height=500)
                 st.markdown("---")
 
-            # IF Q&A MODE -> NO IMAGES
             else:
                 progress_bar.progress(100)
                 st.markdown("---")
 
             col1, col2 = st.columns(2)
             with col1:
-                st.subheader(f"🎬 AI Answer ({language_option})")
+                st.subheader(f"🎬 AI Voiceover Script ({language_option})")
                 st.write(voiceover_script)
                 
                 # --- DOWNLOAD & SHARE OPTIONS ---
