@@ -41,7 +41,7 @@ if st.button("Launch Professional 3D Simulation Suite"):
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
     
     try:
-        # Timeout ko khatam karne ke liye hum direct fast parameter bhejenge
+        # ISS LINE MEIN SLASH (/) FIX KAR DIYA HAI
         url = f"https://pollinations.ai{requests.utils.quote(user_prompt)}?model=searchgpt"
         
         response = requests.get(url)
