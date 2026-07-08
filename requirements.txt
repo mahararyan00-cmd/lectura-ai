@@ -1,3 +1,3 @@
 streamlit
-g4f
-ffmpeg-python
+requests
+huggingface_hub
