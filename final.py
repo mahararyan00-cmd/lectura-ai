@@ -40,17 +40,16 @@ if st.button("Launch Professional 3D Simulation Suite"):
     st.info("⚡ System Booting: Compiling Script, Audio Vectors, and Visual Matrix...")
     
     try:
-        # Bilkul saaf aur direct GET method jismein koi ghalti nahi ho sakti
-        clean_text = f"Create a short 45-second educational video script about {user_prompt}. Divide it into VISUAL CONCEPT and VOICEOVER DIALOGUE."
-        encoded_prompt = requests.utils.quote(clean_text)
+        # Aik aasan proxy system jo link ko tootne nahi deta aur fast chalta hai
+        prompt_text = f"Create a short 45-second educational video script about {user_prompt}. Divide it into VISUAL CONCEPT and VOICEOVER DIALOGUE."
         
-        # Absolute clean URL link structure
-        url = f"https://pollinations.ai{encoded_prompt}"
+        # Hugging Face server structure framework bypass layout
+        url = f"https://pollinations.ai{requests.utils.quote(prompt_text)}?model=openai&private=true"
         
         response = requests.get(url, timeout=30)
         result = response.text
         
-        if result:
+        if result and "Failed to parse" not in result:
             st.success("✨ Phase 1 & 2: Neural Script & Visual Blueprint Compiled!")
             
             # Layout Columns for Professional Look (Side-by-Side Content)
@@ -83,7 +82,7 @@ if st.button("Launch Professional 3D Simulation Suite"):
                 follow_up = st.text_input("Got a question during the animation? Ask here instantly:", key="follow_up_input")
                 if follow_up:
                     st.info("Analyzing context against current visual matrix...")
-                    chat_url = f"https://pollinations.ai{requests.utils.quote(follow_up)}"
+                    chat_url = f"https://pollinations.ai{requests.utils.quote(follow_up)}?model=openai&private=true"
                     chat_res = requests.get(chat_url).text
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>Lectura AI Assistant:</b> {chat_res}</div>", unsafe_allow_html=True)
         else:
