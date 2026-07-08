@@ -123,12 +123,13 @@ language_option = st.selectbox(
     ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic")
 )
 
+# MALE CHATGPT-LIKE VOICES
 voice_codes = {
-    "Roman Urdu": "ur-PK-UzmaNeural",
-    "Urdu (اردو)": "ur-PK-AsadNeural",
-    "Hindi (हिन्दी)": "hi-IN-SwaraNeural",
-    "English": "en-US-AriaNeural",
-    "Arabic": "ar-SA-ZariyahNeural"
+    "Roman Urdu": "ur-PK-AsadNeural",      
+    "Urdu (اردو)": "ur-PK-AsadNeural",      
+    "Hindi (हिन्दी)": "hi-IN-MadhurNeural", 
+    "English": "en-US-GuyNeural",           
+    "Arabic": "ar-SA-HamedNeural"           
 }
 selected_voice_code = voice_codes[language_option]
 
@@ -163,7 +164,6 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar.progress(20)
     
     try:
-        # NEW ADVANCED PROMPT FOR EXAM HEADINGS + SCRIPT SEPARATION
         base_prompt = (
             f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
             f"FORMAT RULES (FOLLOW EXACTLY):\n"
@@ -179,12 +179,10 @@ if st.button("🚀 Generate Answer / Lecture"):
             result = ask_chatgpt_brain(base_prompt, lang=language_option)
         
         if result and len(result.strip()) > 10:
-            # --- PARSING LOGIC ---
             image_keyword = user_prompt 
             exam_headings = ""
             voiceover_script = result
             
-            # Extract Image Prompt
             if "IMAGE_PROMPT:" in result:
                 lines = result.split('\n')
                 for line in lines:
@@ -193,7 +191,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                         voiceover_script = voiceover_script.replace(line, "").strip()
                         break
             
-            # Extract Exam Headings
             if "=== EXAM HEADINGS ===" in voiceover_script:
                 parts = voiceover_script.split("=== EXAM HEADINGS ===")
                 if "=== VOICEOVER SCRIPT ===" in parts[1]:
@@ -203,11 +200,9 @@ if st.button("🚀 Generate Answer / Lecture"):
                 else:
                     exam_headings = parts[1].strip()
                     
-            # Fallback if AI misses the tags
             elif "=== VOICEOVER SCRIPT ===" in voiceover_script:
                 voiceover_script = voiceover_script.split("=== VOICEOVER SCRIPT ===")[1].strip()
 
-            # If AI completely failed to separate, use whole text for voice
             if not exam_headings:
                 exam_headings = "Headings not generated. Please check the script."
             if not voiceover_script:
@@ -216,8 +211,7 @@ if st.button("🚀 Generate Answer / Lecture"):
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
-            # --- GENERATE VOICE (ONLY FOR VOICEOVER SCRIPT) ---
-            st.info(f"🎙️ Generating Realistic AI Voice in {language_option}...")
+            st.info(f"🎙️ Generating ChatGPT-like Male AI Voice in {language_option}...")
             try:
                 temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                 generate_voice(voiceover_script, selected_voice_code, temp_audio.name)
@@ -228,10 +222,8 @@ if st.button("🚀 Generate Answer / Lecture"):
                 st.warning(f"Voice generation failed: {e}")
                 temp_audio_path = None
 
-            # --- DISPLAY LAYOUT ---
             st.markdown("---")
             
-            # --- EXAM HEADINGS SECTION (Beautiful UI Box) ---
             st.markdown(f"""
                 <div style="background-color: #161b26; padding: 25px; border-radius: 12px; border: 2px solid {t['primary']}; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.5);">
                     <h3 style="color: {t['primary']}; margin-top:0; border-bottom: 1px solid #333; padding-bottom:10px;">🎓 Exam Preparation Headings</h3>
@@ -241,7 +233,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                 </div>
             """, unsafe_allow_html=True)
             
-            # IF LECTURE MODE -> GENERATE 10 IMAGES
             if app_mode == "🎬 Lecture Mode (Visual Simulation)":
                 st.info("🎨 Generating 10 Visual Frames...")
                 time.sleep(2) 
@@ -308,7 +299,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                 st.subheader(f"🎬 AI Voiceover Script ({language_option})")
                 st.write(voiceover_script)
                 
-                # --- DOWNLOAD & SHARE OPTIONS ---
                 st.markdown("### 📥 Save & Share Options")
                 dl_col1, dl_col2, dl_col3 = st.columns(3)
                 
@@ -340,7 +330,7 @@ if st.button("🚀 Generate Answer / Lecture"):
                         st.success("Text Copied!")
 
             with col2:
-                st.subheader("🎙️ Ultra-Realistic AI Voice")
+                st.subheader("🎙️ Ultra-Realistic AI Voice (Male)")
                 if temp_audio_path:
                     st.audio(temp_audio_path, format="audio/mp3")
                 
