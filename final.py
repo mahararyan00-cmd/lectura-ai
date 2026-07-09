@@ -21,7 +21,14 @@ if "prompt_key" not in st.session_state:
     st.session_state.prompt_key = 0
 
 PREMIUM_CODE = "LECTURA2024" 
-FREE_LIMIT = 50 # 1 Week Free Trial (50 Lectures)
+FREE_LIMIT = 50 
+
+# ==========================================
+# 🛑 APNI DETAILS YAHAN DALEIN
+# ==========================================
+YOUR_EASYPAISA_NUMBER = "0300-1234567" # Apna Easypaisa/JazzCash number likhein
+YOUR_WHATSAPP_LINK = "https://wa.link/n6dqm6" # Aapka WhatsApp short link
+# ==========================================
 
 # --- THEME SETTINGS ---
 themes = {
@@ -43,6 +50,11 @@ def clean_text_for_voice(text):
     text = re.sub(r'\*.*?\*', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
+
+# FLOATING WHATSAPP BUTTON (Screen ke neeche right side)
+st.markdown(f"""
+    <a href="{YOUR_WHATSAPP_LINK}" target="_blank" style="position: fixed; bottom: 20px; right: 20px; background-color: #25D366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.5); z-index: 999; text-decoration: none; font-size: 30px;">💬</a>
+""", unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
@@ -76,18 +88,18 @@ with st.sidebar:
                     safe_rerun()
     else: st.write("No previous lectures yet.")
 
-    # PREMIUM & INTERNATIONAL PAYMENT BANNER
+    # SIDEBAR PREMIUM BANNER (PAKISTAN ONLY)
     st.markdown("---")
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 20px; text-align: center; border-radius: 10px; color: black;">
             <h3 style="margin:0; color: #050A30;">👑 Get Premium!</h3>
-            <p style="margin:5px 0; font-size: 14px; font-weight:bold;">Unlimited Lectures</p>
-            <p style="margin:0; font-size: 12px;">🇵🇰 Easypaisa: 0300-1234567</p>
-            <p style="margin:0; font-size: 12px;">🌍 Int'l Card: <a href="https://ko-fi.com/yourusername" target="_blank" style="color:#050A30; font-weight:bold;">Pay Here</a></p>
+            <p style="margin:5px 0; font-size: 14px; font-weight:bold;">Unlimited Lectures - Rs. 500</p>
+            <p style="margin:0; font-size: 12px;">🇵🇰 Easypaisa/JazzCash: <b>{YOUR_EASYPAISA_NUMBER}</b></p>
+            <a href="{YOUR_WHATSAPP_LINK}" target="_blank" style="background-color: #25D366; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; display: inline-block; margin-top: 10px; font-weight: bold;">💬 WhatsApp for Code</a>
         </div>
     """, unsafe_allow_html=True)
 
-# --- PAYWALL CHECK (1 WEEK FREE TRIAL = 50 LECTURES) ---
+# --- PAYWALL CHECK (PAKISTAN ONLY) ---
 if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LIMIT:
     st.markdown("---")
     st.error("🚫 **Free Trial Expired!**")
@@ -95,9 +107,10 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
         <div style="background-color: #161b26; padding: 30px; border-radius: 12px; border: 2px solid #f7971e; text-align: center;">
             <h3 style="color: #f7971e;">👑 Upgrade to Premium</h3>
             <p style="color: white; font-size: 18px;">Aap ne {FREE_LIMIT} free lectures use kar li hain.</p>
-            <p style="color: white; font-size: 16px;">🇵🇰 <b>Pakistan:</b> Rs. 500/- Easypaisa/JazzCash: 0300-1234567</p>
-            <p style="color: white; font-size: 16px;">🌍 <b>International:</b> <a href="https://ko-fi.com/yourusername" target="_blank" style="color: #00f2fe; font-weight:bold;">Click here to Pay with Card</a></p>
-            <p style="color: #aaa; font-size: 14px;">Payment ke baun code len aur neeche enter karein.</p>
+            <p style="color: white; font-size: 16px;">🇵🇰 <b>Pakistan Payment:</b> Rs. 500/- Easypaisa/JazzCash par bhejein:</p>
+            <h2 style="color: #00f2fe;">{YOUR_EASYPAISA_NUMBER}</h2>
+            <a href="{YOUR_WHATSAPP_LINK}" target="_blank" style="background-color: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 15px; font-weight: bold; font-size: 18px;">💬 WhatsApp karein aur Code lein</a>
+            <p style="color: #aaa; font-size: 14px; margin-top: 15px;">Paise bhejne ke baad WhatsApp par message karein, hum Premium Code de denge.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -105,9 +118,9 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
     if st.button("🔓 Unlock Premium"):
         if code_input == PREMIUM_CODE:
             st.session_state.is_premium = True
-            st.success("🎉 Premium Activated!")
+            st.success("🎉 Premium Activated! Unlimited lectures enjoy karein.")
             safe_rerun()
-        else: st.error("❌ Invalid Code.")
+        else: st.error("❌ Invalid Code. Paise bhejein aur sahi code lein.")
     st.stop()
 
 # Main Layout
@@ -123,17 +136,9 @@ st.markdown(f"""
 app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Fast Answers)", "🎬 Lecture Mode (Visual Simulation)"))
 language_option = st.selectbox("🎙️ Select Voiceover Language:", ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic"))
 
-# 100% CONFIRMED MALE CHATGPT-LIKE VOICES
-voice_codes = {
-    "Roman Urdu": "ur-PK-AsadNeural",      
-    "Urdu (اردو)": "ur-PK-AsadNeural",      
-    "Hindi (हिन्दी)": "hi-IN-MadhurNeural", 
-    "English": "en-US-GuyNeural",           
-    "Arabic": "ar-SA-HamedNeural"           
-}
+voice_codes = {"Roman Urdu": "ur-PK-AsadNeural", "Urdu (اردو)": "ur-PK-AsadNeural", "Hindi (हिन्दी)": "hi-IN-MadhurNeural", "English": "en-US-GuyNeural", "Arabic": "ar-SA-HamedNeural"}
 selected_voice_code = voice_codes[language_option]
 
-# IMAGE UPLOAD REMOVED - ONLY TEXT INPUT NOW
 user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
 
 def generate_voice(text, voice_code, filename):
@@ -163,7 +168,6 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar.progress(20)
     
     try:
-        # ADDED [QUESTIONS_START] FOR NEW FEATURE
         base_prompt = (
             f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
             f"FORMAT (FOLLOW EXACTLY):\n"
@@ -184,7 +188,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                 for line in result_clean.split('\n'):
                     if line.strip().startswith("IMAGE_PROMPT:"): image_keyword = line.replace("IMAGE_PROMPT:", "").strip(); result_clean = result_clean.replace(line, "").strip()
             
-            # ROBUST PARSING FOR ALL TAGS
             if "[HEADINGS_START]" in result_clean and "[VOICEOVER_START]" in result_clean:
                 parts = result_clean.split("[HEADINGS_START]")
                 if len(parts) > 1:
@@ -192,15 +195,12 @@ if st.button("🚀 Generate Answer / Lecture"):
                     if len(sub_parts) > 1:
                         exam_headings = sub_parts[0].strip()
                         remaining_text = sub_parts[1]
-                        
-                        # Extract Questions
                         if "[QUESTIONS_START]" in remaining_text and "[QUESTIONS_END]" in remaining_text:
                             q_parts = remaining_text.split("[QUESTIONS_START]")
                             voiceover_script = q_parts[0].strip()
                             q_sub_parts = q_parts[1].split("[QUESTIONS_END]")
                             related_questions = q_sub_parts[0].strip()
-                        else:
-                            voiceover_script = remaining_text.strip()
+                        else: voiceover_script = remaining_text.strip()
             
             if not exam_headings: exam_headings = "Headings not generated."
             if not voiceover_script: voiceover_script = result
@@ -250,7 +250,6 @@ if st.button("🚀 Generate Answer / Lecture"):
                 st.subheader("🎙️ Ultra-Realistic AI Voice (Male)")
                 if temp_audio_path: st.audio(temp_audio_path, format="audio/mp3")
                 
-                # NEW FEATURE: RELATED QUESTIONS FOR STUDENTS
                 st.markdown("---")
                 st.subheader("❓ Test Yourself (Related Questions)")
                 st.markdown(f"""
