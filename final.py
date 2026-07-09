@@ -6,8 +6,6 @@ import base64
 import asyncio
 import re
 import edge_tts
-from PIL import Image
-import io
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
@@ -23,7 +21,7 @@ if "prompt_key" not in st.session_state:
     st.session_state.prompt_key = 0
 
 PREMIUM_CODE = "LECTURA2024" 
-FREE_LIMIT = 999 
+FREE_LIMIT = 50 # 1 Week Free Trial (50 Lectures)
 
 # --- THEME SETTINGS ---
 themes = {
@@ -45,33 +43,6 @@ def clean_text_for_voice(text):
     text = re.sub(r'\*.*?\*', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
-
-# FUNCTION TO COMPRESS IMAGE FOR API WITHOUT LOSING TEXT QUALITY
-def compress_image_for_api(image_file):
-    try:
-        img = Image.open(image_file)
-        # Convert transparent images to white background JPEG
-        if img.mode in ("RGBA", "P"):
-            background = Image.new("RGB", img.size, (255, 255, 255))
-            background.paste(img, mask=img.split()[3]) if img.mode == 'RGBA' else background.paste(img)
-            img = background
-        elif img.mode != "RGB":
-            img = img.convert("RGB")
-            
-        # Resize if the image is too huge (API limit is usually around 1600px width)
-        max_width = 1600
-        if img.width > max_width:
-            ratio = max_width / img.width
-            new_height = int(img.height * ratio)
-            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS) # LANCZOS keeps text sharp
-            
-        # Save to buffer with high quality
-        buffer = io.BytesIO()
-        img.save(buffer, format="JPEG", quality=90)
-        return base64.b64encode(buffer.getvalue()).decode('utf-8')
-    except Exception as e:
-        st.error(f"Image processing error: {e}")
-        return None
 
 # Sidebar
 with st.sidebar:
@@ -105,27 +76,31 @@ with st.sidebar:
                     safe_rerun()
     else: st.write("No previous lectures yet.")
 
+    # PREMIUM & INTERNATIONAL PAYMENT BANNER
     st.markdown("---")
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 20px; text-align: center; border-radius: 10px; color: black;">
             <h3 style="margin:0; color: #050A30;">👑 Get Premium!</h3>
-            <p style="margin:5px 0; font-size: 14px; font-weight:bold;">Unlimited Lectures & Ad-Free</p>
-            <p style="margin:5px 0; font-size: 18px;">Rs. 500/- Only</p>
-            <p style="margin:0; font-size: 12px;">Easypaisa: 0300-1234567</p>
+            <p style="margin:5px 0; font-size: 14px; font-weight:bold;">Unlimited Lectures</p>
+            <p style="margin:0; font-size: 12px;">🇵🇰 Easypaisa: 0300-1234567</p>
+            <p style="margin:0; font-size: 12px;">🌍 Int'l Card: <a href="https://ko-fi.com/yourusername" target="_blank" style="color:#050A30; font-weight:bold;">Pay Here</a></p>
         </div>
     """, unsafe_allow_html=True)
 
-# --- PAYWALL CHECK ---
+# --- PAYWALL CHECK (1 WEEK FREE TRIAL = 50 LECTURES) ---
 if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LIMIT:
     st.markdown("---")
-    st.error("🚫 **Free Limit Reached!**")
+    st.error("🚫 **Free Trial Expired!**")
     st.markdown(f"""
         <div style="background-color: #161b26; padding: 30px; border-radius: 12px; border: 2px solid #f7971e; text-align: center;">
             <h3 style="color: #f7971e;">👑 Upgrade to Premium</h3>
-            <p style="color: white; font-size: 18px;">Premium access ke liye Rs. 500/- Easypaisa/JazzCash par bhejein:</p>
-            <h2 style="color: #00f2fe;">0300-1234567</h2>
+            <p style="color: white; font-size: 18px;">Aap ne {FREE_LIMIT} free lectures use kar li hain.</p>
+            <p style="color: white; font-size: 16px;">🇵🇰 <b>Pakistan:</b> Rs. 500/- Easypaisa/JazzCash: 0300-1234567</p>
+            <p style="color: white; font-size: 16px;">🌍 <b>International:</b> <a href="https://ko-fi.com/yourusername" target="_blank" style="color: #00f2fe; font-weight:bold;">Click here to Pay with Card</a></p>
+            <p style="color: #aaa; font-size: 14px;">Payment ke baun code len aur neeche enter karein.</p>
         </div>
     """, unsafe_allow_html=True)
+    
     code_input = st.text_input("🔑 Enter Premium Code:")
     if st.button("🔓 Unlock Premium"):
         if code_input == PREMIUM_CODE:
@@ -140,27 +115,26 @@ st.title("🌟 Lectura AI Pro — Studio Dashboard")
 st.write("Powered by ChatGPT Brain & Ultra-Realistic Voice")
 
 st.markdown(f"""
-    <div style="background-color: #161b26; padding: 15px; text-align: center; border-radius: 8px; border: 2px solid {t['primary']}; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-        <div style="text-align: left;">
-            <p style="color: white; font-size: 16px; font-weight: bold; margin:0;">📚 Ace Your Exams with AI!</p>
-        </div>
-        <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 8px 15px; border-radius: 5px; color: black; font-weight: bold;">
-            Go Premium 👑
-        </div>
+    <div style="background-color: #161b26; padding: 15px; text-align: center; border-radius: 8px; border: 2px solid {t['primary']}; margin-bottom: 20px;">
+        <p style="color: white; font-size: 16px; font-weight: bold; margin:0;">📚 Ace Your Exams with AI Visual Lectures & Quiz!</p>
     </div>
 """, unsafe_allow_html=True)
 
 app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Fast Answers)", "🎬 Lecture Mode (Visual Simulation)"))
 language_option = st.selectbox("🎙️ Select Voiceover Language:", ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic"))
-voice_codes = {"Roman Urdu": "ur-PK-AsadNeural", "Urdu (اردو)": "ur-PK-AsadNeural", "Hindi (हिन्दी)": "hi-IN-MadhurNeural", "English": "en-US-GuyNeural", "Arabic": "ar-SA-HamedNeural"}
+
+# 100% CONFIRMED MALE CHATGPT-LIKE VOICES
+voice_codes = {
+    "Roman Urdu": "ur-PK-AsadNeural",      
+    "Urdu (اردو)": "ur-PK-AsadNeural",      
+    "Hindi (हिन्दी)": "hi-IN-MadhurNeural", 
+    "English": "en-US-GuyNeural",           
+    "Arabic": "ar-SA-HamedNeural"           
+}
 selected_voice_code = voice_codes[language_option]
 
-col_input1, col_input2 = st.columns(2)
-with col_input1: 
-    user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
-with col_input2:
-    uploaded_file = st.file_uploader("📷 Upload an image (Optional):", type=["jpg", "jpeg", "png"])
-    if uploaded_file is not None: st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
+# IMAGE UPLOAD REMOVED - ONLY TEXT INPUT NOW
+user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
 
 def generate_voice(text, voice_code, filename):
     async def _save():
@@ -168,10 +142,9 @@ def generate_voice(text, voice_code, filename):
         await communicate.save(filename)
     asyncio.run(_save())
 
-def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
+def ask_chatgpt_brain(prompt_text, lang="English"):
     url = "https://text.pollinations.ai/"
-    user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}] if image_base64 else prompt_text
-    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor and OCR reader. Follow format strictly. Do not hallucinate. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
+    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow format strictly. Write pure spoken text."}, {"role": "user", "content": prompt_text}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -183,58 +156,55 @@ def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
 
 if st.button("🚀 Generate Answer / Lecture"):
     st.session_state.lecture_count += 1
-    if user_prompt not in st.session_state.history: st.session_state.history.append(user_prompt if not uploaded_file else "📷 Image Question")
+    if user_prompt not in st.session_state.history: st.session_state.history.append(user_prompt)
     progress_bar = st.progress(0)
     
-    image_base64_str = None
-    if uploaded_file is not None:
-        # USE SMART COMPRESS FUNCTION
-        image_base64_str = compress_image_for_api(uploaded_file)
-
     st.info("⚡ ChatGPT Brain is thinking...")
     progress_bar.progress(20)
     
     try:
-        if image_base64_str:
-            base_prompt = (
-                f"CRITICAL: You are a world-class OCR and UI Analysis expert. "
-                f"The user has uploaded a screenshot. Read every single text, button, and shortcut written in the image exactly as it is. "
-                f"DO NOT say you cannot see the image. DO NOT hallucinate medical terms. "
-                f"User question about this image: {user_prompt}. Language: STRICTLY {language_option}. "
-                f"FORMAT:\n1. First line: 'IMAGE_PROMPT: ' + 1 accurate English sentence.\n"
-                f"2. Next line: '[HEADINGS_START]'\n3-5 points based on the text read from the image.\n"
-                f"3. Next line: '[VOICEOVER_START]'\nDetailed explanation answering the user's question based ONLY on the image. No [music]."
-            )
-        else:
-            base_prompt = (
-                f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
-                f"FORMAT:\n1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
-                f"2. Next line: '[HEADINGS_START]'\n3-5 points.\n"
-                f"3. Next line: '[VOICEOVER_START]'\nDetailed explanation. No [music]."
-            )
+        # ADDED [QUESTIONS_START] FOR NEW FEATURE
+        base_prompt = (
+            f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
+            f"FORMAT (FOLLOW EXACTLY):\n"
+            f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
+            f"2. Next line: '[HEADINGS_START]'\n 3-5 exam points.\n"
+            f"3. Next line: '[VOICEOVER_START]'\n Detailed spoken explanation. No [music].\n"
+            f"4. Next line: '[QUESTIONS_START]'\n 5 important questions related to the topic to test the student.\n"
+            f"5. Next line: '[QUESTIONS_END]'"
+        )
             
-        result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, lang=language_option)
+        result = ask_chatgpt_brain(base_prompt, lang=language_option)
         
         if result and len(result.strip()) > 10:
-            image_keyword, exam_headings, voiceover_script = user_prompt, "", result
+            image_keyword, exam_headings, voiceover_script, related_questions = user_prompt, "", result, ""
             result_clean = re.sub(r'\*+', '', result) 
             
             if "IMAGE_PROMPT:" in result_clean:
                 for line in result_clean.split('\n'):
                     if line.strip().startswith("IMAGE_PROMPT:"): image_keyword = line.replace("IMAGE_PROMPT:", "").strip(); result_clean = result_clean.replace(line, "").strip()
             
+            # ROBUST PARSING FOR ALL TAGS
             if "[HEADINGS_START]" in result_clean and "[VOICEOVER_START]" in result_clean:
                 parts = result_clean.split("[HEADINGS_START]")
                 if len(parts) > 1:
                     sub_parts = parts[1].split("[VOICEOVER_START]")
                     if len(sub_parts) > 1:
                         exam_headings = sub_parts[0].strip()
-                        voiceover_script = sub_parts[1].strip()
-            elif "[VOICEOVER_START]" in result_clean:
-                voiceover_script = result_clean.split("[VOICEOVER_START]")[1].strip()
-                
+                        remaining_text = sub_parts[1]
+                        
+                        # Extract Questions
+                        if "[QUESTIONS_START]" in remaining_text and "[QUESTIONS_END]" in remaining_text:
+                            q_parts = remaining_text.split("[QUESTIONS_START]")
+                            voiceover_script = q_parts[0].strip()
+                            q_sub_parts = q_parts[1].split("[QUESTIONS_END]")
+                            related_questions = q_sub_parts[0].strip()
+                        else:
+                            voiceover_script = remaining_text.strip()
+            
             if not exam_headings: exam_headings = "Headings not generated."
             if not voiceover_script: voiceover_script = result
+            if not related_questions: related_questions = "Questions not generated."
 
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
@@ -275,11 +245,23 @@ if st.button("🚀 Generate Answer / Lecture"):
                         st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
                 with dl_col3:
                     if st.button("📋 Copy Text"): st.markdown(f"""<script>navigator.clipboard.writeText(`{voiceover_script.replace('`', "'")}`);</script>""", unsafe_allow_html=True); st.success("Copied!")
+            
             with col2:
                 st.subheader("🎙️ Ultra-Realistic AI Voice (Male)")
                 if temp_audio_path: st.audio(temp_audio_path, format="audio/mp3")
-                st.subheader("💬 Ask Follow-up Question")
-                follow_up = st.text_input("Ask a question:", key="follow_up_input")
+                
+                # NEW FEATURE: RELATED QUESTIONS FOR STUDENTS
+                st.markdown("---")
+                st.subheader("❓ Test Yourself (Related Questions)")
+                st.markdown(f"""
+                    <div style="background-color: #1a1f2e; padding: 20px; border-radius: 10px; border-left: 5px solid #f7971e; color: white; font-size: 16px; line-height: 1.8;">
+                        {related_questions.replace(chr(10), '<br>')}
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("---")
+                st.subheader("💬 Still Confused? Ask Below")
+                follow_up = st.text_input("Ask a follow-up question:", key="follow_up_input")
                 if follow_up:
                     chat_result = ask_chatgpt_brain(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
                     chat_clean = clean_text_for_voice(chat_result)
@@ -289,4 +271,3 @@ if st.button("🚀 Generate Answer / Lecture"):
                     st.audio(temp_chat_audio.name, format="audio/mp3")
         else: st.error("⚠️ AI returned empty.")
     except Exception as e: st.error(f"Execution Error: {e}")
-        
