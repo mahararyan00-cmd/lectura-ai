@@ -20,14 +20,13 @@ if "is_premium" not in st.session_state:
 if "prompt_key" not in st.session_state:
     st.session_state.prompt_key = 0
 
-PREMIUM_CODE = "LECTURA2024" 
 FREE_LIMIT = 50 
 
 # ==========================================
 # 🛑 APNI DETAILS YAHAN DALEIN
 # ==========================================
 YOUR_EASYPAISA_NUMBER = "0300-1234567" # ⚠️ APNA ASLI EASYPAISA NUMBER YAHAN LIKHEN
-YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK UPDATED
+YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK
 # ==========================================
 
 # --- THEME SETTINGS ---
@@ -51,7 +50,7 @@ def clean_text_for_voice(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# FLOATING WHATSAPP BUTTON (Screen ke neeche right side)
+# FLOATING WHATSAPP BUTTON
 st.markdown(f"""
     <a href="{YOUR_WHATSAPP_LINK}" target="_blank" style="position: fixed; bottom: 20px; right: 20px; background-color: #25D366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.5); z-index: 999; text-decoration: none; font-size: 30px;">💬</a>
 """, unsafe_allow_html=True)
@@ -88,7 +87,7 @@ with st.sidebar:
                     safe_rerun()
     else: st.write("No previous lectures yet.")
 
-    # SIDEBAR PREMIUM BANNER (PAKISTAN ONLY)
+    # SIDEBAR PREMIUM BANNER
     st.markdown("---")
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 20px; text-align: center; border-radius: 10px; color: black;">
@@ -99,7 +98,7 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-# --- PAYWALL CHECK (PAKISTAN ONLY) ---
+# --- PAYWALL CHECK (PERSONALIZED CODE SYSTEM) ---
 if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LIMIT:
     st.markdown("---")
     st.error("🚫 **Free Trial Expired!**")
@@ -107,20 +106,33 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
         <div style="background-color: #161b26; padding: 30px; border-radius: 12px; border: 2px solid #f7971e; text-align: center;">
             <h3 style="color: #f7971e;">👑 Upgrade to Premium</h3>
             <p style="color: white; font-size: 18px;">Aap ne {FREE_LIMIT} free lectures use kar li hain.</p>
-            <p style="color: white; font-size: 16px;">🇵🇰 <b>Pakistan Payment:</b> Rs. 500/- Easypaisa/JazzCash par bhejein:</p>
+            <p style="color: white; font-size: 16px;">🇵🇰 <b>Payment:</b> Rs. 500/- Easypaisa/JazzCash par bhejein:</p>
             <h2 style="color: #00f2fe;">{YOUR_EASYPAISA_NUMBER}</h2>
             <a href="{YOUR_WHATSAPP_LINK}" target="_blank" style="background-color: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 15px; font-weight: bold; font-size: 18px;">💬 WhatsApp karein aur Code lein</a>
             <p style="color: #aaa; font-size: 14px; margin-top: 15px;">Paise bhejne ke baad WhatsApp par message karein, hum Premium Code de denge.</p>
         </div>
     """, unsafe_allow_html=True)
     
-    code_input = st.text_input("🔑 Enter Premium Code:")
-    if st.button("🔓 Unlock Premium"):
-        if code_input == PREMIUM_CODE:
-            st.session_state.is_premium = True
-            st.success("🎉 Premium Activated! Unlimited lectures enjoy karein.")
-            safe_rerun()
-        else: st.error("❌ Invalid Code. Paise bhejein aur sahi code lein.")
+    # PERSONALIZED CODE LOGIC
+    st.markdown("---")
+    st.subheader("🔑 Unlock Premium")
+    user_phone = st.text_input("📱 Apna Easypaisa/JazzCash Number daalein (Jis se paise bheje):", placeholder="e.g., 03001234567")
+    
+    if user_phone:
+        # Code generation logic: LECTURA- + Last 4 digits of user's phone
+        last_4_digits = user_phone.strip().replace("-", "").replace(" ", "")[-4:]
+        correct_code = f"LECTURA-{last_4_digits}"
+        
+        st.info(f"💡 **Aapka Personal Code:** `LECTURA-{last_4_digits}` (Yeh code sirf is number ke liye hai!)")
+        
+        code_input = st.text_input("🔐 Yahan apna Personal Code enter karein:")
+        if st.button("🔓 Unlock Premium"):
+            if code_input.strip() == correct_code:
+                st.session_state.is_premium = True
+                st.success("🎉 Premium Activated! Unlimited lectures enjoy karein.")
+                safe_rerun()
+            else: 
+                st.error("❌ Invalid Code! Yeh code is number ke saath match nahi karta. Paise bhejein aur sahi code lein.")
     st.stop()
 
 # Main Layout
