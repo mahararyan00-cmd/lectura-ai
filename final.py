@@ -4,6 +4,7 @@ import tempfile
 import time
 import base64
 import asyncio
+import re
 import edge_tts
 from PIL import Image
 
@@ -30,15 +31,20 @@ themes = {
     "Sunset Orange": {"primary": "#f7971e", "secondary": "#ffd200", "bg": "#19130b"}
 }
 
-# Safe Rerun Function (Fixed AttributeError)
 def safe_rerun():
-    try:
-        st.rerun()
+    try: st.rerun()
     except:
-        try:
-            st.experimental_rerun()
-        except:
-            pass # Agar phir bhi error aaye toh kuch na kare, app next click par khud refresh ho jayegi
+        try: st.experimental_rerun()
+        except: pass
+
+# FUNCTION TO CLEAN TEXT FOR VOICE (Removes [music], *sound*, etc.)
+def clean_text_for_voice(text):
+    # Removes anything inside brackets [] or parentheses () or asterisks **
+    text = re.sub(r'[\[\(].*?[\]\)]', '', text)
+    text = re.sub(r'\*.*?\*', '', text)
+    # Remove extra spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 # Sidebar
 with st.sidebar:
@@ -57,12 +63,9 @@ with st.sidebar:
 
     st.markdown("---")
     st.title("📜 Lecture History")
-    
-    # NEW LECTURE BUTTON (Fixed)
     if st.button("🆕 Start New Lecture", use_container_width=True):
         st.session_state.history = []
         safe_rerun()
-        
     st.markdown("---")
     
     if st.session_state.history:
@@ -75,11 +78,14 @@ with st.sidebar:
                     safe_rerun()
     else: st.write("No previous lectures yet.")
 
+    # SIDEBAR PREMIUM BANNER (Instead of Empty Ad)
     st.markdown("---")
-    st.markdown("""
-        <div style="background-color: #222; padding: 20px; text-align: center; border-radius: 8px; border: 1px dashed #555;">
-            <p style="color: #888; font-size: 12px; margin:0;">AD SPACE</p>
-            <p style="color: #555; font-size: 10px; margin:0;">Google AdSense Will Appear Here</p>
+    st.markdown(f"""
+        <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 20px; text-align: center; border-radius: 10px; color: black;">
+            <h3 style="margin:0; color: #050A30;">👑 Get Premium!</h3>
+            <p style="margin:5px 0; font-size: 14px; font-weight:bold;">Unlimited Lectures & Ad-Free</p>
+            <p style="margin:5px 0; font-size: 18px;">Rs. 500/- Only</p>
+            <p style="margin:0; font-size: 12px;">Easypaisa: 0300-1234567</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -111,9 +117,16 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
 st.title("🌟 Lectura AI Pro — Studio Dashboard")
 st.write("Powered by ChatGPT Brain & Ultra-Realistic Voice")
 
-st.markdown("""
-    <div style="background-color: #222; padding: 15px; text-align: center; border-radius: 8px; border: 1px dashed #555; margin-bottom: 20px;">
-        <p style="color: #888; font-size: 12px; margin:0;">AD SPACE - GOOGLE ADSENSE</p>
+# TOP PREMIUM BANNER (Instead of Empty Ad)
+st.markdown(f"""
+    <div style="background-color: #161b26; padding: 15px; text-align: center; border-radius: 8px; border: 2px solid {t['primary']}; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="text-align: left;">
+            <p style="color: white; font-size: 16px; font-weight: bold; margin:0;">📚 Ace Your Exams with AI!</p>
+            <p style="color: #aaa; font-size: 12px; margin:0;">Visual Lectures, Notes & Exam Headings</p>
+        </div>
+        <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 8px 15px; border-radius: 5px; color: black; font-weight: bold;">
+            Go Premium 👑
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -137,7 +150,7 @@ def generate_voice(text, voice_code, filename):
 def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
     url = "https://text.pollinations.ai/"
     user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}] if image_base64 else prompt_text
-    payload = {"messages": [{"role": "system", "content": "You are ChatGPT, expert AI tutor. Follow format strictly. Do not guess or hallucinate image contents."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
+    payload = {"messages": [{"role": "system", "content": "You are an expert, highly accurate AI tutor. Think step-by-step. Do not hallucinate. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -155,10 +168,9 @@ if st.button("🚀 Generate Answer / Lecture"):
     image_base64_str = None
     if uploaded_file is not None:
         try:
-            img = Image.open(uploaded_file)
-            if img.mode in ("RGBA", "P"): img = img.convert("RGB")
+            img = Image.open(uploaded_file).convert("RGB") # Force RGB for best AI Vision results
             buf = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-            img.save(buf.name, format="JPEG")
+            img.save(buf.name, format="JPEG", quality=95) # High quality for AI
             with open(buf.name, "rb") as f: image_base64_str = base64.b64encode(f.read()).decode('utf-8')
         except Exception as e: st.error(f"Image error: {e}")
 
@@ -166,24 +178,26 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar.progress(20)
     
     try:
-        # STRICT IMAGE PROMPT TO STOP HALLUCINATION (X-RAY FIX)
+        # STRICT IMAGE PROMPT (Think Step-by-Step to stop hallucination)
         if image_base64_str:
             base_prompt = (
-                f"CRITICAL INSTRUCTION: Analyze the uploaded image with 100% accuracy. "
-                f"DO NOT guess or hallucinate (If it's a software screenshot, DO NOT call it an X-ray or medical image). "
-                f"Describe EXACTLY what is visually present in the image. "
-                f"User's question about this image: {user_prompt}. "
-                f"Language: STRICTLY {language_option}. "
-                f"FORMAT: 1. First line: 'IMAGE_PROMPT: ' + 1 accurate English sentence describing the actual objects in the image. "
-                f"2. '=== EXAM HEADINGS ===' + 3-5 short points about the actual image content. "
-                f"3. '=== VOICEOVER SCRIPT ===' + detailed explanation answering the user's question based ONLY on the image."
+                f"CRITICAL INSTRUCTION: Think step-by-step. Analyze the uploaded image with 100% accuracy. "
+                f"1. What are the exact objects, text, or UI elements visible? "
+                f"2. If it's a screenshot, describe the software/buttons. DO NOT use medical terms like X-ray unless it is literally an X-ray. "
+                f"3. Answer the user question based ONLY on step 1 and 2. "
+                f"User question: {user_prompt}. Language: STRICTLY {language_option}. "
+                f"FORMAT: First line: 'IMAGE_PROMPT: ' + 1 accurate English sentence. "
+                f"Next line: '=== EXAM HEADINGS ===' + 3-5 points. "
+                f"Next line: '=== VOICEOVER SCRIPT ===' + pure spoken explanation. "
+                f"DO NOT add stage directions like [music] or (sound). Write ONLY spoken text."
             )
         else:
             base_prompt = (
                 f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
-                f"FORMAT: 1. First line: 'IMAGE_PROMPT: ' + 1 English sentence. "
-                f"2. '=== EXAM HEADINGS ===' + 3-5 short points. "
-                f"3. '=== VOICEOVER SCRIPT ===' + detailed explanation."
+                f"FORMAT: First line: 'IMAGE_PROMPT: ' + 1 English sentence. "
+                f"Next line: '=== EXAM HEADINGS ===' + 3-5 points. "
+                f"Next line: '=== VOICEOVER SCRIPT ===' + pure spoken explanation. "
+                f"DO NOT add stage directions like [music] or (sound). Write ONLY spoken text."
             )
             
         result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, lang=language_option)
@@ -204,9 +218,12 @@ if st.button("🚀 Generate Answer / Lecture"):
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
+            # CLEAN TEXT FOR VOICE (Removes [music], *sound*, etc.)
+            voiceover_clean = clean_text_for_voice(voiceover_script)
+            
             try:
                 temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                generate_voice(voiceover_script, selected_voice_code, temp_audio.name)
+                generate_voice(voiceover_clean, selected_voice_code, temp_audio.name)
                 progress_bar.progress(70); st.success("✨ Voice Synthesized!"); temp_audio_path = temp_audio.name
             except: temp_audio_path = None
 
@@ -245,8 +262,9 @@ if st.button("🚀 Generate Answer / Lecture"):
                 follow_up = st.text_input("Ask a question:", key="follow_up_input")
                 if follow_up:
                     chat_result = ask_chatgpt_brain(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
+                    chat_clean = clean_text_for_voice(chat_result)
                     temp_chat_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                    generate_voice(chat_result, selected_voice_code, temp_chat_audio.name)
+                    generate_voice(chat_clean, selected_voice_code, temp_chat_audio.name)
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_result}</div>", unsafe_allow_html=True)
                     st.audio(temp_chat_audio.name, format="audio/mp3")
         else: st.error("⚠️ AI returned empty.")
