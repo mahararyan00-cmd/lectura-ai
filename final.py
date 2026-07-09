@@ -18,6 +18,8 @@ if "lecture_count" not in st.session_state:
     st.session_state.lecture_count = 0
 if "is_premium" not in st.session_state:
     st.session_state.is_premium = False
+if "prompt_key" not in st.session_state:
+    st.session_state.prompt_key = 0
 
 PREMIUM_CODE = "LECTURA2024" # Apna secret code yahan likhein
 FREE_LIMIT = 3
@@ -39,10 +41,8 @@ def safe_rerun():
 
 # FUNCTION TO CLEAN TEXT FOR VOICE (Removes [music], *sound*, etc.)
 def clean_text_for_voice(text):
-    # Removes anything inside brackets [] or parentheses () or asterisks **
     text = re.sub(r'[\[\(].*?[\]\)]', '', text)
     text = re.sub(r'\*.*?\*', '', text)
-    # Remove extra spaces
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -63,9 +63,12 @@ with st.sidebar:
 
     st.markdown("---")
     st.title("📜 Lecture History")
+    
+    # NEW LECTURE BUTTON (FIXED: Only clears input, not history!)
     if st.button("🆕 Start New Lecture", use_container_width=True):
-        st.session_state.history = []
+        st.session_state.prompt_key += 1 # Yeh sirf input box khaali karega
         safe_rerun()
+        
     st.markdown("---")
     
     if st.session_state.history:
@@ -78,7 +81,6 @@ with st.sidebar:
                     safe_rerun()
     else: st.write("No previous lectures yet.")
 
-    # SIDEBAR PREMIUM BANNER (Instead of Empty Ad)
     st.markdown("---")
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 20px; text-align: center; border-radius: 10px; color: black;">
@@ -117,7 +119,6 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
 st.title("🌟 Lectura AI Pro — Studio Dashboard")
 st.write("Powered by ChatGPT Brain & Ultra-Realistic Voice")
 
-# TOP PREMIUM BANNER (Instead of Empty Ad)
 st.markdown(f"""
     <div style="background-color: #161b26; padding: 15px; text-align: center; border-radius: 8px; border: 2px solid {t['primary']}; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
         <div style="text-align: left;">
@@ -136,7 +137,9 @@ voice_codes = {"Roman Urdu": "ur-PK-AsadNeural", "Urdu (اردو)": "ur-PK-AsadN
 selected_voice_code = voice_codes[language_option]
 
 col_input1, col_input2 = st.columns(2)
-with col_input1: user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?")
+with col_input1: 
+    # KEY IS USED SO NEW LECTURE BUTTON CAN CLEAR IT
+    user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
 with col_input2:
     uploaded_file = st.file_uploader("📷 Upload an image (Optional):", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None: st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
@@ -150,7 +153,7 @@ def generate_voice(text, voice_code, filename):
 def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
     url = "https://text.pollinations.ai/"
     user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}] if image_base64 else prompt_text
-    payload = {"messages": [{"role": "system", "content": "You are an expert, highly accurate AI tutor. Think step-by-step. Do not hallucinate. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
+    payload = {"messages": [{"role": "system", "content": "You are an expert, highly accurate AI tutor. Follow the exact requested format. Do not hallucinate. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -168,9 +171,9 @@ if st.button("🚀 Generate Answer / Lecture"):
     image_base64_str = None
     if uploaded_file is not None:
         try:
-            img = Image.open(uploaded_file).convert("RGB") # Force RGB for best AI Vision results
+            img = Image.open(uploaded_file).convert("RGB")
             buf = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-            img.save(buf.name, format="JPEG", quality=95) # High quality for AI
+            img.save(buf.name, format="JPEG", quality=95)
             with open(buf.name, "rb") as f: image_base64_str = base64.b64encode(f.read()).decode('utf-8')
         except Exception as e: st.error(f"Image error: {e}")
 
@@ -178,47 +181,59 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar.progress(20)
     
     try:
-        # STRICT IMAGE PROMPT (Think Step-by-Step to stop hallucination)
+        # STRICT PROMPT WITH NEW UNIQUE TAGS (Fixes Headings not generated issue)
         if image_base64_str:
             base_prompt = (
-                f"CRITICAL INSTRUCTION: Think step-by-step. Analyze the uploaded image with 100% accuracy. "
-                f"1. What are the exact objects, text, or UI elements visible? "
-                f"2. If it's a screenshot, describe the software/buttons. DO NOT use medical terms like X-ray unless it is literally an X-ray. "
-                f"3. Answer the user question based ONLY on step 1 and 2. "
+                f"CRITICAL INSTRUCTION: Analyze the uploaded image with 100% accuracy like a forensic expert. "
+                f"If it is a screenshot, describe the software/buttons. DO NOT use medical terms like X-ray unless it is literally an X-ray. "
                 f"User question: {user_prompt}. Language: STRICTLY {language_option}. "
-                f"FORMAT: First line: 'IMAGE_PROMPT: ' + 1 accurate English sentence. "
-                f"Next line: '=== EXAM HEADINGS ===' + 3-5 points. "
-                f"Next line: '=== VOICEOVER SCRIPT ===' + pure spoken explanation. "
-                f"DO NOT add stage directions like [music] or (sound). Write ONLY spoken text."
+                f"FORMAT (FOLLOW EXACTLY):\n"
+                f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
+                f"2. Next line: '[HEADINGS_START]'\n"
+                f"3. Under that, 3-5 exam points.\n"
+                f"4. Next line: '[VOICEOVER_START]'\n"
+                f"5. Under that, pure spoken explanation. DO NOT add [music] or (sound)."
             )
         else:
             base_prompt = (
                 f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
-                f"FORMAT: First line: 'IMAGE_PROMPT: ' + 1 English sentence. "
-                f"Next line: '=== EXAM HEADINGS ===' + 3-5 points. "
-                f"Next line: '=== VOICEOVER SCRIPT ===' + pure spoken explanation. "
-                f"DO NOT add stage directions like [music] or (sound). Write ONLY spoken text."
+                f"FORMAT (FOLLOW EXACTLY):\n"
+                f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
+                f"2. Next line: '[HEADINGS_START]'\n"
+                f"3. Under that, 3-5 exam points.\n"
+                f"4. Next line: '[VOICEOVER_START]'\n"
+                f"5. Under that, pure spoken explanation. DO NOT add [music] or (sound)."
             )
             
         result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, lang=language_option)
         
         if result and len(result.strip()) > 10:
             image_keyword, exam_headings, voiceover_script = user_prompt, "", result
-            if "IMAGE_PROMPT:" in result:
-                for line in result.split('\n'):
-                    if line.strip().startswith("IMAGE_PROMPT:"): image_keyword = line.replace("IMAGE_PROMPT:", "").strip(); voiceover_script = voiceover_script.replace(line, "").strip()
-            if "=== EXAM HEADINGS ===" in voiceover_script:
-                parts = voiceover_script.split("=== EXAM HEADINGS ===")
-                if "=== VOICEOVER SCRIPT ===" in parts[1]: sub_parts = parts[1].split("=== VOICEOVER SCRIPT ==="); exam_headings = sub_parts[0].strip(); voiceover_script = sub_parts[1].strip()
-                else: exam_headings = parts[1].strip()
-            elif "=== VOICEOVER SCRIPT ===" in voiceover_script: voiceover_script = voiceover_script.split("=== VOICEOVER SCRIPT ===")[1].strip()
+            
+            # Normalize text to remove bold markdown that breaks detection
+            result_clean = re.sub(r'\*+', '', result) 
+            
+            if "IMAGE_PROMPT:" in result_clean:
+                for line in result_clean.split('\n'):
+                    if line.strip().startswith("IMAGE_PROMPT:"): image_keyword = line.replace("IMAGE_PROMPT:", "").strip(); result_clean = result_clean.replace(line, "").strip()
+            
+            # ROBUST PARSING FOR NEW TAGS
+            if "[HEADINGS_START]" in result_clean and "[VOICEOVER_START]" in result_clean:
+                parts = result_clean.split("[HEADINGS_START]")
+                if len(parts) > 1:
+                    sub_parts = parts[1].split("[VOICEOVER_START]")
+                    if len(sub_parts) > 1:
+                        exam_headings = sub_parts[0].strip()
+                        voiceover_script = sub_parts[1].strip()
+            elif "[VOICEOVER_START]" in result_clean:
+                voiceover_script = result_clean.split("[VOICEOVER_START]")[1].strip()
+                
             if not exam_headings: exam_headings = "Headings not generated."
             if not voiceover_script: voiceover_script = result
 
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
-            # CLEAN TEXT FOR VOICE (Removes [music], *sound*, etc.)
             voiceover_clean = clean_text_for_voice(voiceover_script)
             
             try:
