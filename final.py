@@ -21,8 +21,8 @@ if "is_premium" not in st.session_state:
 if "prompt_key" not in st.session_state:
     st.session_state.prompt_key = 0
 
-PREMIUM_CODE = "LECTURA2024" # Apna secret code yahan likhein
-FREE_LIMIT = 3
+PREMIUM_CODE = "LECTURA2024" # Apna secret code
+FREE_LIMIT = 999 # Testing ke liye 999, launch ke waqt 3 karna
 
 # --- THEME SETTINGS ---
 themes = {
@@ -39,7 +39,6 @@ def safe_rerun():
         try: st.experimental_rerun()
         except: pass
 
-# FUNCTION TO CLEAN TEXT FOR VOICE (Removes [music], *sound*, etc.)
 def clean_text_for_voice(text):
     text = re.sub(r'[\[\(].*?[\]\)]', '', text)
     text = re.sub(r'\*.*?\*', '', text)
@@ -63,12 +62,9 @@ with st.sidebar:
 
     st.markdown("---")
     st.title("📜 Lecture History")
-    
-    # NEW LECTURE BUTTON (FIXED: Only clears input, not history!)
     if st.button("🆕 Start New Lecture", use_container_width=True):
-        st.session_state.prompt_key += 1 # Yeh sirf input box khaali karega
+        st.session_state.prompt_key += 1
         safe_rerun()
-        
     st.markdown("---")
     
     if st.session_state.history:
@@ -109,10 +105,10 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
     if st.button("🔓 Unlock Premium"):
         if code_input == PREMIUM_CODE:
             st.session_state.is_premium = True
-            st.success("🎉 Premium Activated! Enjoy unlimited lectures.")
+            st.success("🎉 Premium Activated!")
             safe_rerun()
         else:
-            st.error("❌ Invalid Code. Please try again.")
+            st.error("❌ Invalid Code.")
     st.stop()
 
 # Main Layout
@@ -138,7 +134,6 @@ selected_voice_code = voice_codes[language_option]
 
 col_input1, col_input2 = st.columns(2)
 with col_input1: 
-    # KEY IS USED SO NEW LECTURE BUTTON CAN CLEAR IT
     user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
 with col_input2:
     uploaded_file = st.file_uploader("📷 Upload an image (Optional):", type=["jpg", "jpeg", "png"])
@@ -150,10 +145,11 @@ def generate_voice(text, voice_code, filename):
         await communicate.save(filename)
     asyncio.run(_save())
 
-def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
+def ask_chatgpt_brain(prompt_text, image_base64=None, mime_type="image/jpeg", lang="English"):
     url = "https://text.pollinations.ai/"
-    user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}] if image_base64 else prompt_text
-    payload = {"messages": [{"role": "system", "content": "You are an expert, highly accurate AI tutor. Follow the exact requested format. Do not hallucinate. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
+    # Dynamic mime type and exact lossless base64 for perfect screenshot reading
+    user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_base64}"}}] if image_base64 else prompt_text
+    payload = {"messages": [{"role": "system", "content": "You are an expert, highly accurate AI tutor and OCR expert. Follow format strictly. Do not hallucinate. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -169,55 +165,50 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar = st.progress(0)
     
     image_base64_str = None
+    image_mime = "image/jpeg"
     if uploaded_file is not None:
         try:
-            img = Image.open(uploaded_file).convert("RGB")
-            buf = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-            img.save(buf.name, format="JPEG", quality=95)
-            with open(buf.name, "rb") as f: image_base64_str = base64.b64encode(f.read()).decode('utf-8')
+            # LOSSLESS IMAGE ENCODING (Direct bytes, no PIL compression - Fixes Screenshot text)
+            image_mime = uploaded_file.type or "image/jpeg"
+            image_base64_str = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
         except Exception as e: st.error(f"Image error: {e}")
 
     st.info("⚡ ChatGPT Brain is thinking...")
     progress_bar.progress(20)
     
     try:
-        # STRICT PROMPT WITH NEW UNIQUE TAGS (Fixes Headings not generated issue)
+        # EXTREMELY STRICT OCR PROMPT FOR IMAGES
         if image_base64_str:
             base_prompt = (
-                f"CRITICAL INSTRUCTION: Analyze the uploaded image with 100% accuracy like a forensic expert. "
-                f"If it is a screenshot, describe the software/buttons. DO NOT use medical terms like X-ray unless it is literally an X-ray. "
-                f"User question: {user_prompt}. Language: STRICTLY {language_option}. "
-                f"FORMAT (FOLLOW EXACTLY):\n"
-                f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
-                f"2. Next line: '[HEADINGS_START]'\n"
-                f"3. Under that, 3-5 exam points.\n"
-                f"4. Next line: '[VOICEOVER_START]'\n"
-                f"5. Under that, pure spoken explanation. DO NOT add [music] or (sound)."
+                f"CRITICAL INSTRUCTION: You are a world-class OCR and UI Analysis expert. "
+                f"Look at the uploaded image with 100% accuracy. Read every single text, button, or UI element exactly as written. "
+                f"DO NOT hallucinate or guess. If it is a software screenshot, describe the software and its buttons. "
+                f"DO NOT use medical terms like X-ray, lungs, or chest unless it is literally an X-ray image. "
+                f"User question about this image: {user_prompt}. Language: STRICTLY {language_option}. "
+                f"FORMAT:\n"
+                f"1. First line: 'IMAGE_PROMPT: ' + 1 accurate English sentence of what is EXACTLY in the image.\n"
+                f"2. Next line: '[HEADINGS_START]'\n 3-5 points based on the text you read.\n"
+                f"3. Next line: '[VOICEOVER_START]'\n Detailed explanation answering the user's question based ONLY on the image. No [music]."
             )
         else:
             base_prompt = (
                 f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
-                f"FORMAT (FOLLOW EXACTLY):\n"
+                f"FORMAT:\n"
                 f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
-                f"2. Next line: '[HEADINGS_START]'\n"
-                f"3. Under that, 3-5 exam points.\n"
-                f"4. Next line: '[VOICEOVER_START]'\n"
-                f"5. Under that, pure spoken explanation. DO NOT add [music] or (sound)."
+                f"2. Next line: '[HEADINGS_START]'\n 3-5 points.\n"
+                f"3. Next line: '[VOICEOVER_START]'\n Detailed explanation. No [music]."
             )
             
-        result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, lang=language_option)
+        result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, mime_type=image_mime, lang=language_option)
         
         if result and len(result.strip()) > 10:
             image_keyword, exam_headings, voiceover_script = user_prompt, "", result
-            
-            # Normalize text to remove bold markdown that breaks detection
             result_clean = re.sub(r'\*+', '', result) 
             
             if "IMAGE_PROMPT:" in result_clean:
                 for line in result_clean.split('\n'):
                     if line.strip().startswith("IMAGE_PROMPT:"): image_keyword = line.replace("IMAGE_PROMPT:", "").strip(); result_clean = result_clean.replace(line, "").strip()
             
-            # ROBUST PARSING FOR NEW TAGS
             if "[HEADINGS_START]" in result_clean and "[VOICEOVER_START]" in result_clean:
                 parts = result_clean.split("[HEADINGS_START]")
                 if len(parts) > 1:
