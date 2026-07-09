@@ -47,9 +47,13 @@ def safe_rerun():
         except: pass
 
 def clean_text_for_voice(text):
+    # Remove specific section markers if they slipped in
+    text = re.sub(r'Section\s*\d+\s*:', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'IMAGE_PROMPT|EXAM_HEADINGS|VOICEOVER_SCRIPT|QUESTIONS', '', text, flags=re.IGNORECASE)
     text = re.sub(r'[\[\(].*?[\]\)]', '', text)
     text = re.sub(r'\*.*?\*', '', text)
     text = re.sub(r'[\*#_>`]', '', text)
+    text = text.replace('###', '')
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -165,7 +169,6 @@ def generate_voice(text, voice_code, filename):
         except Exception as e:
             print(f"Voice Error: {e}")
 
-    # Run in a separate thread to bypass Streamlit's event loop restrictions
     thread = threading.Thread(target=run_async)
     thread.start()
     thread.join()
@@ -219,13 +222,13 @@ if st.button("🚀 Generate Answer / Lecture"):
                     for sec in sections:
                         sec_lower = sec.lower()
                         if "image_prompt" in sec_lower:
-                            image_keyword = sec.replace("IMAGE_PROMPT:", "").replace("Image Prompt:", "").strip()
+                            image_keyword = re.sub(r'^(Section\s*\d+[:\s]*)?(IMAGE_PROMPT)\s*:', '', sec, flags=re.IGNORECASE).strip()
                         elif "exam_headings" in sec_lower:
-                            exam_headings = sec.replace("EXAM_HEADINGS:", "").replace("Exam Headings:", "").strip()
+                            exam_headings = re.sub(r'^(Section\s*\d+[:\s]*)?(EXAM_HEADINGS)\s*:', '', sec, flags=re.IGNORECASE).strip()
                         elif "voiceover_script" in sec_lower:
-                            voiceover_script = sec.replace("VOICEOVER_SCRIPT:", "").replace("Voiceover Script:", "").strip()
+                            voiceover_script = re.sub(r'^(Section\s*\d+[:\s]*)?(VOICEOVER_SCRIPT)\s*:', '', sec, flags=re.IGNORECASE).strip()
                         elif "questions" in sec_lower:
-                            related_questions = sec.replace("QUESTIONS:", "").replace("Questions:", "").strip()
+                            related_questions = re.sub(r'^(Section\s*\d+[:\s]*)?(QUESTIONS)\s*:', '', sec, flags=re.IGNORECASE).strip()
 
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
