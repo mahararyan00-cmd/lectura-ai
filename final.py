@@ -4,12 +4,10 @@ import tempfile
 import time
 import base64
 import asyncio
+import threading
+import os
 import re
 import edge_tts
-import nest_asyncio
-
-# Fix for Streamlit Async Event Loop Error (Voice Over Fix)
-nest_asyncio.apply()
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
@@ -157,13 +155,20 @@ def generate_voice(text, voice_code, filename):
     async def _save():
         communicate = edge_tts.Communicate(text, voice_code)
         await communicate.save(filename)
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(_save())
-        loop.close()
-    except Exception as e:
-        print(f"Voice Error: {e}")
+        
+    def run_async():
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(_save())
+            loop.close()
+        except Exception as e:
+            print(f"Voice Error: {e}")
+
+    # Run in a separate thread to bypass Streamlit's event loop restrictions
+    thread = threading.Thread(target=run_async)
+    thread.start()
+    thread.join()
 
 def ask_chatgpt_brain(prompt_text):
     url = "https://text.pollinations.ai/"
@@ -186,7 +191,6 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar.progress(20)
     
     try:
-        # SIMPLIFIED PROMPT (Fixes Script & Questions issue)
         base_prompt = (
             f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
             f"Write a response separated into exactly 4 sections using the word '###' on a new line.\n"
@@ -204,13 +208,11 @@ if st.button("🚀 Generate Answer / Lecture"):
         if result and len(result.strip()) > 10:
             result_clean = re.sub(r'\*+', '', result) 
             
-            # DEFAULT FALLBACKS
             image_keyword = "educational concept 3D realistic"
             exam_headings = "Headings not generated."
             voiceover_script = result_clean
             related_questions = "Questions not generated."
 
-            # ROBUST PARSING LOGIC
             if "###" in result_clean:
                 sections = result_clean.split("###")
                 if len(sections) >= 4:
