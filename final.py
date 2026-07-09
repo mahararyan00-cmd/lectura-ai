@@ -26,8 +26,8 @@ FREE_LIMIT = 50
 # ==========================================
 # 🛑 APNI DETAILS YAHAN DALEIN
 # ==========================================
-YOUR_EASYPAISA_NUMBER = "0300-0681582" # Apna Easypaisa/JazzCash number likhein
-YOUR_WHATSAPP_LINK = "https://wa.link/n6dqm6" # Aapka WhatsApp short link
+YOUR_EASYPAISA_NUMBER = "0300-1234567" # ⚠️ APNA ASLI EASYPAISA NUMBER YAHAN LIKHEN
+YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK UPDATED
 # ==========================================
 
 # --- THEME SETTINGS ---
