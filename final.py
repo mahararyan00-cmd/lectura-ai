@@ -7,6 +7,7 @@ import asyncio
 import re
 import edge_tts
 from PIL import Image
+import io
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
@@ -21,8 +22,8 @@ if "is_premium" not in st.session_state:
 if "prompt_key" not in st.session_state:
     st.session_state.prompt_key = 0
 
-PREMIUM_CODE = "LECTURA2024" # Apna secret code
-FREE_LIMIT = 999 # Testing ke liye 999, launch ke waqt 3 karna
+PREMIUM_CODE = "LECTURA2024" 
+FREE_LIMIT = 999 
 
 # --- THEME SETTINGS ---
 themes = {
@@ -44,6 +45,33 @@ def clean_text_for_voice(text):
     text = re.sub(r'\*.*?\*', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
+
+# FUNCTION TO COMPRESS IMAGE FOR API WITHOUT LOSING TEXT QUALITY
+def compress_image_for_api(image_file):
+    try:
+        img = Image.open(image_file)
+        # Convert transparent images to white background JPEG
+        if img.mode in ("RGBA", "P"):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3]) if img.mode == 'RGBA' else background.paste(img)
+            img = background
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+            
+        # Resize if the image is too huge (API limit is usually around 1600px width)
+        max_width = 1600
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS) # LANCZOS keeps text sharp
+            
+        # Save to buffer with high quality
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=90)
+        return base64.b64encode(buffer.getvalue()).decode('utf-8')
+    except Exception as e:
+        st.error(f"Image processing error: {e}")
+        return None
 
 # Sidebar
 with st.sidebar:
@@ -94,21 +122,17 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
     st.markdown(f"""
         <div style="background-color: #161b26; padding: 30px; border-radius: 12px; border: 2px solid #f7971e; text-align: center;">
             <h3 style="color: #f7971e;">👑 Upgrade to Premium</h3>
-            <p style="color: white; font-size: 18px;">Aap ne {FREE_LIMIT} free lectures use kar li hain.</p>
-            <p style="color: white; font-size: 16px;">Premium access ke liye Rs. 500/- Easypaisa/JazzCash par bhejein:</p>
+            <p style="color: white; font-size: 18px;">Premium access ke liye Rs. 500/- Easypaisa/JazzCash par bhejein:</p>
             <h2 style="color: #00f2fe;">0300-1234567</h2>
-            <p style="color: #aaa; font-size: 14px;">Payment ke baad code len aur neeche enter karein.</p>
         </div>
     """, unsafe_allow_html=True)
-    
     code_input = st.text_input("🔑 Enter Premium Code:")
     if st.button("🔓 Unlock Premium"):
         if code_input == PREMIUM_CODE:
             st.session_state.is_premium = True
             st.success("🎉 Premium Activated!")
             safe_rerun()
-        else:
-            st.error("❌ Invalid Code.")
+        else: st.error("❌ Invalid Code.")
     st.stop()
 
 # Main Layout
@@ -119,7 +143,6 @@ st.markdown(f"""
     <div style="background-color: #161b26; padding: 15px; text-align: center; border-radius: 8px; border: 2px solid {t['primary']}; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
         <div style="text-align: left;">
             <p style="color: white; font-size: 16px; font-weight: bold; margin:0;">📚 Ace Your Exams with AI!</p>
-            <p style="color: #aaa; font-size: 12px; margin:0;">Visual Lectures, Notes & Exam Headings</p>
         </div>
         <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 8px 15px; border-radius: 5px; color: black; font-weight: bold;">
             Go Premium 👑
@@ -145,11 +168,10 @@ def generate_voice(text, voice_code, filename):
         await communicate.save(filename)
     asyncio.run(_save())
 
-def ask_chatgpt_brain(prompt_text, image_base64=None, mime_type="image/jpeg", lang="English"):
+def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
     url = "https://text.pollinations.ai/"
-    # Dynamic mime type and exact lossless base64 for perfect screenshot reading
-    user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_base64}"}}] if image_base64 else prompt_text
-    payload = {"messages": [{"role": "system", "content": "You are an expert, highly accurate AI tutor and OCR expert. Follow format strictly. Do not hallucinate. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
+    user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}] if image_base64 else prompt_text
+    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor and OCR reader. Follow format strictly. Do not hallucinate. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -165,41 +187,33 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar = st.progress(0)
     
     image_base64_str = None
-    image_mime = "image/jpeg"
     if uploaded_file is not None:
-        try:
-            # LOSSLESS IMAGE ENCODING (Direct bytes, no PIL compression - Fixes Screenshot text)
-            image_mime = uploaded_file.type or "image/jpeg"
-            image_base64_str = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-        except Exception as e: st.error(f"Image error: {e}")
+        # USE SMART COMPRESS FUNCTION
+        image_base64_str = compress_image_for_api(uploaded_file)
 
     st.info("⚡ ChatGPT Brain is thinking...")
     progress_bar.progress(20)
     
     try:
-        # EXTREMELY STRICT OCR PROMPT FOR IMAGES
         if image_base64_str:
             base_prompt = (
-                f"CRITICAL INSTRUCTION: You are a world-class OCR and UI Analysis expert. "
-                f"Look at the uploaded image with 100% accuracy. Read every single text, button, or UI element exactly as written. "
-                f"DO NOT hallucinate or guess. If it is a software screenshot, describe the software and its buttons. "
-                f"DO NOT use medical terms like X-ray, lungs, or chest unless it is literally an X-ray image. "
+                f"CRITICAL: You are a world-class OCR and UI Analysis expert. "
+                f"The user has uploaded a screenshot. Read every single text, button, and shortcut written in the image exactly as it is. "
+                f"DO NOT say you cannot see the image. DO NOT hallucinate medical terms. "
                 f"User question about this image: {user_prompt}. Language: STRICTLY {language_option}. "
-                f"FORMAT:\n"
-                f"1. First line: 'IMAGE_PROMPT: ' + 1 accurate English sentence of what is EXACTLY in the image.\n"
-                f"2. Next line: '[HEADINGS_START]'\n 3-5 points based on the text you read.\n"
-                f"3. Next line: '[VOICEOVER_START]'\n Detailed explanation answering the user's question based ONLY on the image. No [music]."
+                f"FORMAT:\n1. First line: 'IMAGE_PROMPT: ' + 1 accurate English sentence.\n"
+                f"2. Next line: '[HEADINGS_START]'\n3-5 points based on the text read from the image.\n"
+                f"3. Next line: '[VOICEOVER_START]'\nDetailed explanation answering the user's question based ONLY on the image. No [music]."
             )
         else:
             base_prompt = (
                 f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
-                f"FORMAT:\n"
-                f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
-                f"2. Next line: '[HEADINGS_START]'\n 3-5 points.\n"
-                f"3. Next line: '[VOICEOVER_START]'\n Detailed explanation. No [music]."
+                f"FORMAT:\n1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
+                f"2. Next line: '[HEADINGS_START]'\n3-5 points.\n"
+                f"3. Next line: '[VOICEOVER_START]'\nDetailed explanation. No [music]."
             )
             
-        result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, mime_type=image_mime, lang=language_option)
+        result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, lang=language_option)
         
         if result and len(result.strip()) > 10:
             image_keyword, exam_headings, voiceover_script = user_prompt, "", result
@@ -275,3 +289,4 @@ if st.button("🚀 Generate Answer / Lecture"):
                     st.audio(temp_chat_audio.name, format="audio/mp3")
         else: st.error("⚠️ AI returned empty.")
     except Exception as e: st.error(f"Execution Error: {e}")
+        
