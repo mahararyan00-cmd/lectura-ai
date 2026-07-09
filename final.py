@@ -25,8 +25,8 @@ FREE_LIMIT = 50
 # ==========================================
 # 🛑 APNI DETAILS YAHAN DALEIN
 # ==========================================
-YOUR_EASYPAISA_NUMBER = "0300-0681582" # ⚠️ APNA ASLI EASYPAISA NUMBER YAHAN LIKHEN
-YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK
+YOUR_EASYPAISA_NUMBER = "0300-1234567" # ⚠️ APNA ASLI EASYPAISA NUMBER YAHAN LIKHEN
+YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK UPDATED
 # ==========================================
 
 # --- THEME SETTINGS ---
@@ -147,21 +147,29 @@ st.markdown(f"""
 
 app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Fast Answers)", "🎬 Lecture Mode (Visual Simulation)"))
 language_option = st.selectbox("🎙️ Select Voiceover Language:", ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic"))
-
-voice_codes = {"Roman Urdu": "ur-PK-AsadNeural", "Urdu (اردو)": "ur-PK-AsadNeural", "Hindi (हिन्दी)": "hi-IN-MadhurNeural", "English": "en-US-GuyNeural", "Arabic": "ar-SA-HamedNeural"}
+voice_codes = {"Roman Urdu": "en-IN-PrabhatNeural", "Urdu (اردو)": "ur-PK-AsadNeural", "Hindi (हिन्दी)": "hi-IN-MadhurNeural", "English": "en-US-GuyNeural", "Arabic": "ar-SA-HamedNeural"}
 selected_voice_code = voice_codes[language_option]
 
-user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
+# Input Section
+col_input1, col_input2 = st.columns(2)
+with col_input1: 
+    user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
+with col_input2:
+    uploaded_file = st.file_uploader("📷 Upload an image (Optional):", type=["jpg", "jpeg", "png"])
+    if uploaded_file is not None: st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
 
+# Edge TTS Function
 def generate_voice(text, voice_code, filename):
     async def _save():
         communicate = edge_tts.Communicate(text, voice_code)
         await communicate.save(filename)
     asyncio.run(_save())
 
-def ask_chatgpt_brain(prompt_text, lang="English"):
+# ChatGPT Brain Function
+def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
     url = "https://text.pollinations.ai/"
-    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow format strictly. Write pure spoken text."}, {"role": "user", "content": prompt_text}], "model": "openai", "seed": 42}
+    user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}] if image_base64 else prompt_text
+    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow format strictly. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -171,11 +179,21 @@ def ask_chatgpt_brain(prompt_text, lang="English"):
         except: time.sleep(3)
     raise Exception("Server overloaded.")
 
+# Main Button Logic
 if st.button("🚀 Generate Answer / Lecture"):
     st.session_state.lecture_count += 1
     if user_prompt not in st.session_state.history: st.session_state.history.append(user_prompt)
     progress_bar = st.progress(0)
     
+    image_base64_str = None
+    if uploaded_file is not None:
+        try:
+            img = Image.open(uploaded_file).convert("RGB")
+            buf = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+            img.save(buf.name, format="JPEG", quality=95)
+            with open(buf.name, "rb") as f: image_base64_str = base64.b64encode(f.read()).decode('utf-8')
+        except Exception as e: st.error(f"Image error: {e}")
+
     st.info("⚡ ChatGPT Brain is thinking...")
     progress_bar.progress(20)
     
@@ -186,11 +204,11 @@ if st.button("🚀 Generate Answer / Lecture"):
             f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
             f"2. Next line: '[HEADINGS_START]'\n 3-5 exam points.\n"
             f"3. Next line: '[VOICEOVER_START]'\n Detailed spoken explanation. No [music].\n"
-            f"4. Next line: '[QUESTIONS_START]'\n 5 important questions related to the topic to test the student.\n"
+            f"4. Next line: '[QUESTIONS_START]'\n 5 important questions.\n"
             f"5. Next line: '[QUESTIONS_END]'"
         )
             
-        result = ask_chatgpt_brain(base_prompt, lang=language_option)
+        result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, lang=language_option)
         
         if result and len(result.strip()) > 10:
             image_keyword, exam_headings, voiceover_script, related_questions = user_prompt, "", result, ""
@@ -237,7 +255,7 @@ if st.button("🚀 Generate Answer / Lecture"):
                 img_urls = [f"https://image.pollinations.ai/prompt/{requests.utils.quote(image_keyword + f' scene {i+1} 3D realistic educational cinematic')}?width=1024&height=576&nologo=true&seed={i+1}" for i in range(10)]
                 progress_bar.progress(100)
                 st.subheader("🛸 AI Video Simulation")
-                html_template = """<div id="videoContainer" style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid PRIMARY_COLOR;"><img id="videoSlide" src="IMG1_URL" style="width: 100%; height: auto; border-radius: 8px; opacity: 1; transition: opacity 1s ease-in-out;"><div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;"><p style="color: PRIMARY_COLOR; font-family: monospace; margin: 0;">▶ Scene: <span id="frameNum">1</span>/10</p><button onclick="toggleFullscreen()" style="background: linear-gradient(135deg, PRIMARY_COLOR 0%, SECONDARY_COLOR 100%); color: black; font-weight: bold; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">⛶ Fullscreen</button></div></div><script>var images = ["IMG1_URL", "IMG2_URL", "IMG3_URL", "IMG4_URL", "IMG5_URL", "IMG6_URL", "IMG7_URL", "IMG8_URL", "IMG9_URL", "IMG10_URL"];var current = 0;var imgElement = document.getElementById("videoSlide");var frameNum = document.getElementById("frameNum");setInterval(function() {imgElement.style.opacity = 0;setTimeout(function() {current = (current + 1) % images.length;imgElement.src = images[current];frameNum.innerText = current + 1;imgElement.style.opacity = 1;}, 1000);}, 5000);function toggleFullscreen() {var elem = document.getElementById('videoContainer');if (!document.fullscreenElement) {if (elem.requestFullscreen) { elem.requestFullscreen(); }} else {if (document.exitFullscreen) { document.exitFullscreen(); }}}</script>"""
+                html_template = """<div id="videoContainer" style="text-align: center; background: #000; padding: 10px; border-radius: 10px; border: 2px solid PRIMARY_COLOR;"><img id="videoSlide" src="IMG1_URL" style="width: 100%; height: auto; border-radius: 8px; opacity: 1; transition: opacity 0.8s ease-in-out;"><div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;"><p style="color: PRIMARY_COLOR; font-family: monospace; margin: 0;">▶ Scene: <span id="frameNum">1</span>/10</p><button onclick="toggleFullscreen()" style="background: linear-gradient(135deg, PRIMARY_COLOR 0%, SECONDARY_COLOR 100%); color: black; font-weight: bold; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">⛶ Fullscreen</button></div></div><script>var images = ["IMG1_URL", "IMG2_URL", "IMG3_URL", "IMG4_URL", "IMG5_URL", "IMG6_URL", "IMG7_URL", "IMG8_URL", "IMG9_URL", "IMG10_URL"];var current = 0;var imgElement = document.getElementById("videoSlide");var frameNum = document.getElementById("frameNum");setInterval(function() {imgElement.style.opacity = 0;setTimeout(function() {current = (current + 1) % images.length;imgElement.src = images[current];frameNum.innerText = current + 1;imgElement.style.opacity = 1;}, 1000);}, 5000);function toggleFullscreen() {var elem = document.getElementById('videoContainer');if (!document.fullscreenElement) {if (elem.requestFullscreen) { elem.requestFullscreen(); }} else {if (document.exitFullscreen) { document.exitFullscreen(); }}}</script>"""
                 final_html = html_template.replace("PRIMARY_COLOR", t['primary']).replace("SECONDARY_COLOR", t['secondary'])
                 for i, url in enumerate(img_urls): final_html = final_html.replace(f"IMG{i+1}_URL", url)
                 st.components.v1.html(final_html, height=500)
@@ -265,9 +283,7 @@ if st.button("🚀 Generate Answer / Lecture"):
                 st.markdown("---")
                 st.subheader("❓ Test Yourself (Related Questions)")
                 st.markdown(f"""
-                    <div style="background-color: #1a1f2e; padding: 20px; border-radius: 10px; border-left: 5px solid #f7971e; color: white; font-size: 16px; line-height: 1.8;">
-                        {related_questions.replace(chr(10), '<br>')}
-                    </div>
+                    <div style="background-color: #1a1f2e; padding: 20px; border-radius: 10px; border-left: 5px solid #f7971e; color: white; font-size: 16px; line-height: 1.8;">{related_questions.replace(chr(10), '<br>')}</div>
                 """, unsafe_allow_html=True)
                 
                 st.markdown("---")
@@ -280,5 +296,21 @@ if st.button("🚀 Generate Answer / Lecture"):
                     generate_voice(chat_clean, selected_voice_code, temp_chat_audio.name)
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_result}</div>", unsafe_allow_html=True)
                     st.audio(temp_chat_audio.name, format="audio/mp3")
-        else: st.error("⚠️ AI returned empty.")
-    except Exception as e: st.error(f"Execution Error: {e}")
+                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
+                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
+                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
+                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
+                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
+                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
+                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
+                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
+                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
+                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
+                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
+                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
+                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
+                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
+                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
+                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
+                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
+                    st.download_button(label="📄 Download Script", data=voiceover
