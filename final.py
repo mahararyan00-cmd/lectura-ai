@@ -30,9 +30,15 @@ themes = {
     "Sunset Orange": {"primary": "#f7971e", "secondary": "#ffd200", "bg": "#19130b"}
 }
 
+# Safe Rerun Function (Fixed AttributeError)
 def safe_rerun():
-    try: st.rerun()
-    except: st.experimental_rerun()
+    try:
+        st.rerun()
+    except:
+        try:
+            st.experimental_rerun()
+        except:
+            pass # Agar phir bhi error aaye toh kuch na kare, app next click par khud refresh ho jayegi
 
 # Sidebar
 with st.sidebar:
@@ -51,9 +57,12 @@ with st.sidebar:
 
     st.markdown("---")
     st.title("📜 Lecture History")
+    
+    # NEW LECTURE BUTTON (Fixed)
     if st.button("🆕 Start New Lecture", use_container_width=True):
         st.session_state.history = []
         safe_rerun()
+        
     st.markdown("---")
     
     if st.session_state.history:
@@ -66,7 +75,6 @@ with st.sidebar:
                     safe_rerun()
     else: st.write("No previous lectures yet.")
 
-    # SIDEBAR AD SPACE
     st.markdown("---")
     st.markdown("""
         <div style="background-color: #222; padding: 20px; text-align: center; border-radius: 8px; border: 1px dashed #555;">
@@ -97,20 +105,18 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
             safe_rerun()
         else:
             st.error("❌ Invalid Code. Please try again.")
-    st.stop() # App yahan rok dega
+    st.stop()
 
 # Main Layout
 st.title("🌟 Lectura AI Pro — Studio Dashboard")
 st.write("Powered by ChatGPT Brain & Ultra-Realistic Voice")
 
-# TOP AD SPACE
 st.markdown("""
     <div style="background-color: #222; padding: 15px; text-align: center; border-radius: 8px; border: 1px dashed #555; margin-bottom: 20px;">
         <p style="color: #888; font-size: 12px; margin:0;">AD SPACE - GOOGLE ADSENSE</p>
     </div>
 """, unsafe_allow_html=True)
 
-# Mode & Language
 app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Fast Answers)", "🎬 Lecture Mode (Visual Simulation)"))
 language_option = st.selectbox("🎙️ Select Voiceover Language:", ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic"))
 voice_codes = {"Roman Urdu": "ur-PK-AsadNeural", "Urdu (اردو)": "ur-PK-AsadNeural", "Hindi (हिन्दी)": "hi-IN-MadhurNeural", "English": "en-US-GuyNeural", "Arabic": "ar-SA-HamedNeural"}
@@ -122,18 +128,16 @@ with col_input2:
     uploaded_file = st.file_uploader("📷 Upload an image (Optional):", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None: st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
 
-# Edge TTS Function
 def generate_voice(text, voice_code, filename):
     async def _save():
         communicate = edge_tts.Communicate(text, voice_code)
         await communicate.save(filename)
     asyncio.run(_save())
 
-# ChatGPT Brain Function
 def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
     url = "https://text.pollinations.ai/"
     user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}] if image_base64 else prompt_text
-    payload = {"messages": [{"role": "system", "content": "You are ChatGPT, expert AI tutor. Follow format strictly."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
+    payload = {"messages": [{"role": "system", "content": "You are ChatGPT, expert AI tutor. Follow format strictly. Do not guess or hallucinate image contents."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -162,8 +166,27 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar.progress(20)
     
     try:
-        base_prompt = f"Topic: {user_prompt}. Language: STRICTLY {language_option}. FORMAT: 1. First line: 'IMAGE_PROMPT: ' + 1 English sentence. 2. '=== EXAM HEADINGS ===' + 3-5 short points. 3. '=== VOICEOVER SCRIPT ===' + detailed explanation."
-        result = ask_chatgpt_brain(f"Look at this image. {base_prompt}", image_base64=image_base64_str, lang=language_option) if image_base64_str else ask_chatgpt_brain(base_prompt, lang=language_option)
+        # STRICT IMAGE PROMPT TO STOP HALLUCINATION (X-RAY FIX)
+        if image_base64_str:
+            base_prompt = (
+                f"CRITICAL INSTRUCTION: Analyze the uploaded image with 100% accuracy. "
+                f"DO NOT guess or hallucinate (If it's a software screenshot, DO NOT call it an X-ray or medical image). "
+                f"Describe EXACTLY what is visually present in the image. "
+                f"User's question about this image: {user_prompt}. "
+                f"Language: STRICTLY {language_option}. "
+                f"FORMAT: 1. First line: 'IMAGE_PROMPT: ' + 1 accurate English sentence describing the actual objects in the image. "
+                f"2. '=== EXAM HEADINGS ===' + 3-5 short points about the actual image content. "
+                f"3. '=== VOICEOVER SCRIPT ===' + detailed explanation answering the user's question based ONLY on the image."
+            )
+        else:
+            base_prompt = (
+                f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
+                f"FORMAT: 1. First line: 'IMAGE_PROMPT: ' + 1 English sentence. "
+                f"2. '=== EXAM HEADINGS ===' + 3-5 short points. "
+                f"3. '=== VOICEOVER SCRIPT ===' + detailed explanation."
+            )
+            
+        result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, lang=language_option)
         
         if result and len(result.strip()) > 10:
             image_keyword, exam_headings, voiceover_script = user_prompt, "", result
