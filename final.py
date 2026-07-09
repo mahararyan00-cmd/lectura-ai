@@ -26,7 +26,7 @@ FREE_LIMIT = 50
 # 🛑 APNI DETAILS YAHAN DALEIN
 # ==========================================
 YOUR_EASYPAISA_NUMBER = "0300-1234567" # ⚠️ APNA ASLI EASYPAISA NUMBER YAHAN LIKHEN
-YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK UPDATED
+YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK
 # ==========================================
 
 # --- THEME SETTINGS ---
@@ -119,10 +119,8 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
     user_phone = st.text_input("📱 Apna Easypaisa/JazzCash Number daalein (Jis se paise bheje):", placeholder="e.g., 03001234567")
     
     if user_phone:
-        # Code generation logic: LECTURA- + Last 4 digits of user's phone
         last_4_digits = user_phone.strip().replace("-", "").replace(" ", "")[-4:]
         correct_code = f"LECTURA-{last_4_digits}"
-        
         st.info(f"💡 **Aapka Personal Code:** `LECTURA-{last_4_digits}` (Yeh code sirf is number ke liye hai!)")
         
         code_input = st.text_input("🔐 Yahan apna Personal Code enter karein:")
@@ -132,7 +130,7 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
                 st.success("🎉 Premium Activated! Unlimited lectures enjoy karein.")
                 safe_rerun()
             else: 
-                st.error("❌ Invalid Code! Yeh code is number ke saath match nahi karta. Paise bhejein aur sahi code lein.")
+                st.error("❌ Invalid Code! Yeh code is number ke saath match nahi karta.")
     st.stop()
 
 # Main Layout
@@ -147,29 +145,22 @@ st.markdown(f"""
 
 app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Fast Answers)", "🎬 Lecture Mode (Visual Simulation)"))
 language_option = st.selectbox("🎙️ Select Voiceover Language:", ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic"))
+
+# ROMAN URDU FIX: PrabhatNeural reads Roman Urdu perfectly!
 voice_codes = {"Roman Urdu": "en-IN-PrabhatNeural", "Urdu (اردو)": "ur-PK-AsadNeural", "Hindi (हिन्दी)": "hi-IN-MadhurNeural", "English": "en-US-GuyNeural", "Arabic": "ar-SA-HamedNeural"}
 selected_voice_code = voice_codes[language_option]
 
-# Input Section
-col_input1, col_input2 = st.columns(2)
-with col_input1: 
-    user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
-with col_input2:
-    uploaded_file = st.file_uploader("📷 Upload an image (Optional):", type=["jpg", "jpeg", "png"])
-    if uploaded_file is not None: st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
+user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
 
-# Edge TTS Function
 def generate_voice(text, voice_code, filename):
     async def _save():
         communicate = edge_tts.Communicate(text, voice_code)
         await communicate.save(filename)
     asyncio.run(_save())
 
-# ChatGPT Brain Function
-def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
+def ask_chatgpt_brain(prompt_text, lang="English"):
     url = "https://text.pollinations.ai/"
-    user_content = [{"type": "text", "text": prompt_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}] if image_base64 else prompt_text
-    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow format strictly. Write pure spoken text."}, {"role": "user", "content": user_content}], "model": "openai", "seed": 42}
+    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow format strictly. Write pure spoken text."}, {"role": "user", "content": prompt_text}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -179,21 +170,11 @@ def ask_chatgpt_brain(prompt_text, image_base64=None, lang="English"):
         except: time.sleep(3)
     raise Exception("Server overloaded.")
 
-# Main Button Logic
 if st.button("🚀 Generate Answer / Lecture"):
     st.session_state.lecture_count += 1
     if user_prompt not in st.session_state.history: st.session_state.history.append(user_prompt)
     progress_bar = st.progress(0)
     
-    image_base64_str = None
-    if uploaded_file is not None:
-        try:
-            img = Image.open(uploaded_file).convert("RGB")
-            buf = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-            img.save(buf.name, format="JPEG", quality=95)
-            with open(buf.name, "rb") as f: image_base64_str = base64.b64encode(f.read()).decode('utf-8')
-        except Exception as e: st.error(f"Image error: {e}")
-
     st.info("⚡ ChatGPT Brain is thinking...")
     progress_bar.progress(20)
     
@@ -208,7 +189,7 @@ if st.button("🚀 Generate Answer / Lecture"):
             f"5. Next line: '[QUESTIONS_END]'"
         )
             
-        result = ask_chatgpt_brain(base_prompt, image_base64=image_base64_str, lang=language_option)
+        result = ask_chatgpt_brain(base_prompt, lang=language_option)
         
         if result and len(result.strip()) > 10:
             image_keyword, exam_headings, voiceover_script, related_questions = user_prompt, "", result, ""
@@ -277,13 +258,15 @@ if st.button("🚀 Generate Answer / Lecture"):
                     if st.button("📋 Copy Text"): st.markdown(f"""<script>navigator.clipboard.writeText(`{voiceover_script.replace('`', "'")}`);</script>""", unsafe_allow_html=True); st.success("Copied!")
             
             with col2:
-                st.subheader("🎙️ Ultra-Realistic AI Voice (Male)")
+                st.subheader("🎙️ Ultra-Realistic AI Voice")
                 if temp_audio_path: st.audio(temp_audio_path, format="audio/mp3")
                 
                 st.markdown("---")
                 st.subheader("❓ Test Yourself (Related Questions)")
                 st.markdown(f"""
-                    <div style="background-color: #1a1f2e; padding: 20px; border-radius: 10px; border-left: 5px solid #f7971e; color: white; font-size: 16px; line-height: 1.8;">{related_questions.replace(chr(10), '<br>')}</div>
+                    <div style="background-color: #1a1f2e; padding: 20px; border-radius: 10px; border-left: 5px solid #f7971e; color: white; font-size: 16px; line-height: 1.8;">
+                        {related_questions.replace(chr(10), '<br>')}
+                    </div>
                 """, unsafe_allow_html=True)
                 
                 st.markdown("---")
@@ -296,21 +279,5 @@ if st.button("🚀 Generate Answer / Lecture"):
                     generate_voice(chat_clean, selected_voice_code, temp_chat_audio.name)
                     st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_result}</div>", unsafe_allow_html=True)
                     st.audio(temp_chat_audio.name, format="audio/mp3")
-                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
-                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
-                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
-                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
-                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
-                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
-                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
-                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
-                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
-                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
-                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
-                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
-                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
-                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
-                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
-                    st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
-                    st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
-                    st.download_button(label="📄 Download Script", data=voiceover
+        else: st.error("⚠️ AI returned empty.")
+    except Exception as e: st.error(f"Execution Error: {e}")
