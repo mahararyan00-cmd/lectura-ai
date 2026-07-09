@@ -6,6 +6,10 @@ import base64
 import asyncio
 import re
 import edge_tts
+import nest_asyncio
+
+# Fix for Streamlit Async Event Loop Error (Voice Over Fix)
+nest_asyncio.apply()
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
@@ -47,6 +51,7 @@ def safe_rerun():
 def clean_text_for_voice(text):
     text = re.sub(r'[\[\(].*?[\]\)]', '', text)
     text = re.sub(r'\*.*?\*', '', text)
+    text = re.sub(r'[\*#_>`]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -87,7 +92,6 @@ with st.sidebar:
                     safe_rerun()
     else: st.write("No previous lectures yet.")
 
-    # SIDEBAR PREMIUM BANNER
     st.markdown("---")
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 20px; text-align: center; border-radius: 10px; color: black;">
@@ -98,7 +102,7 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-# --- PAYWALL CHECK (PERSONALIZED CODE SYSTEM) ---
+# --- PAYWALL CHECK ---
 if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LIMIT:
     st.markdown("---")
     st.error("🚫 **Free Trial Expired!**")
@@ -109,28 +113,26 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
             <p style="color: white; font-size: 16px;">🇵🇰 <b>Payment:</b> Rs. 500/- Easypaisa/JazzCash par bhejein:</p>
             <h2 style="color: #00f2fe;">{YOUR_EASYPAISA_NUMBER}</h2>
             <a href="{YOUR_WHATSAPP_LINK}" target="_blank" style="background-color: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 15px; font-weight: bold; font-size: 18px;">💬 WhatsApp karein aur Code lein</a>
-            <p style="color: #aaa; font-size: 14px; margin-top: 15px;">Paise bhejne ke baad WhatsApp par message karein, hum Premium Code de denge.</p>
         </div>
     """, unsafe_allow_html=True)
     
-    # PERSONALIZED CODE LOGIC
     st.markdown("---")
     st.subheader("🔑 Unlock Premium")
-    user_phone = st.text_input("📱 Apna Easypaisa/JazzCash Number daalein (Jis se paise bheje):", placeholder="e.g., 03001234567")
+    user_phone = st.text_input("📱 Apna Easypaisa/JazzCash Number daalein:", placeholder="e.g., 03001234567")
     
     if user_phone:
         last_4_digits = user_phone.strip().replace("-", "").replace(" ", "")[-4:]
         correct_code = f"LECTURA-{last_4_digits}"
-        st.info(f"💡 **Aapka Personal Code:** `LECTURA-{last_4_digits}` (Yeh code sirf is number ke liye hai!)")
+        st.info(f"💡 **Aapka Personal Code:** `LECTURA-{last_4_digits}`")
         
         code_input = st.text_input("🔐 Yahan apna Personal Code enter karein:")
         if st.button("🔓 Unlock Premium"):
             if code_input.strip() == correct_code:
                 st.session_state.is_premium = True
-                st.success("🎉 Premium Activated! Unlimited lectures enjoy karein.")
+                st.success("🎉 Premium Activated!")
                 safe_rerun()
             else: 
-                st.error("❌ Invalid Code! Yeh code is number ke saath match nahi karta.")
+                st.error("❌ Invalid Code!")
     st.stop()
 
 # Main Layout
@@ -146,7 +148,6 @@ st.markdown(f"""
 app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Fast Answers)", "🎬 Lecture Mode (Visual Simulation)"))
 language_option = st.selectbox("🎙️ Select Voiceover Language:", ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic"))
 
-# ROMAN URDU FIX: PrabhatNeural reads Roman Urdu perfectly!
 voice_codes = {"Roman Urdu": "en-IN-PrabhatNeural", "Urdu (اردو)": "ur-PK-AsadNeural", "Hindi (हिन्दी)": "hi-IN-MadhurNeural", "English": "en-US-GuyNeural", "Arabic": "ar-SA-HamedNeural"}
 selected_voice_code = voice_codes[language_option]
 
@@ -156,11 +157,17 @@ def generate_voice(text, voice_code, filename):
     async def _save():
         communicate = edge_tts.Communicate(text, voice_code)
         await communicate.save(filename)
-    asyncio.run(_save())
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(_save())
+        loop.close()
+    except Exception as e:
+        print(f"Voice Error: {e}")
 
-def ask_chatgpt_brain(prompt_text, lang="English"):
+def ask_chatgpt_brain(prompt_text):
     url = "https://text.pollinations.ai/"
-    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow format strictly. Write pure spoken text."}, {"role": "user", "content": prompt_text}], "model": "openai", "seed": 42}
+    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow the requested format strictly."}, {"role": "user", "content": prompt_text}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -179,54 +186,63 @@ if st.button("🚀 Generate Answer / Lecture"):
     progress_bar.progress(20)
     
     try:
+        # SIMPLIFIED PROMPT (Fixes Script & Questions issue)
         base_prompt = (
             f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
-            f"FORMAT (FOLLOW EXACTLY):\n"
-            f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
-            f"2. Next line: '[HEADINGS_START]'\n 3-5 exam points.\n"
-            f"3. Next line: '[VOICEOVER_START]'\n Detailed spoken explanation. No [music].\n"
-            f"4. Next line: '[QUESTIONS_START]'\n 5 important questions.\n"
-            f"5. Next line: '[QUESTIONS_END]'"
+            f"Write a response separated into exactly 4 sections using the word '###' on a new line.\n"
+            f"Section 1: IMAGE_PROMPT: [Write one English sentence describing an educational image for this topic]\n"
+            f"###\n"
+            f"Section 2: EXAM_HEADINGS: [Write 3-5 bullet points for exam preparation]\n"
+            f"###\n"
+            f"Section 3: VOICEOVER_SCRIPT: [Write a detailed spoken explanation. No markdown, no brackets.]\n"
+            f"###\n"
+            f"Section 4: QUESTIONS: [Write 5 important questions related to the topic]"
         )
             
-        result = ask_chatgpt_brain(base_prompt, lang=language_option)
+        result = ask_chatgpt_brain(base_prompt)
         
         if result and len(result.strip()) > 10:
-            image_keyword, exam_headings, voiceover_script, related_questions = user_prompt, "", result, ""
             result_clean = re.sub(r'\*+', '', result) 
             
-            if "IMAGE_PROMPT:" in result_clean:
-                for line in result_clean.split('\n'):
-                    if line.strip().startswith("IMAGE_PROMPT:"): image_keyword = line.replace("IMAGE_PROMPT:", "").strip(); result_clean = result_clean.replace(line, "").strip()
-            
-            if "[HEADINGS_START]" in result_clean and "[VOICEOVER_START]" in result_clean:
-                parts = result_clean.split("[HEADINGS_START]")
-                if len(parts) > 1:
-                    sub_parts = parts[1].split("[VOICEOVER_START]")
-                    if len(sub_parts) > 1:
-                        exam_headings = sub_parts[0].strip()
-                        remaining_text = sub_parts[1]
-                        if "[QUESTIONS_START]" in remaining_text and "[QUESTIONS_END]" in remaining_text:
-                            q_parts = remaining_text.split("[QUESTIONS_START]")
-                            voiceover_script = q_parts[0].strip()
-                            q_sub_parts = q_parts[1].split("[QUESTIONS_END]")
-                            related_questions = q_sub_parts[0].strip()
-                        else: voiceover_script = remaining_text.strip()
-            
-            if not exam_headings: exam_headings = "Headings not generated."
-            if not voiceover_script: voiceover_script = result
-            if not related_questions: related_questions = "Questions not generated."
+            # DEFAULT FALLBACKS
+            image_keyword = "educational concept 3D realistic"
+            exam_headings = "Headings not generated."
+            voiceover_script = result_clean
+            related_questions = "Questions not generated."
+
+            # ROBUST PARSING LOGIC
+            if "###" in result_clean:
+                sections = result_clean.split("###")
+                if len(sections) >= 4:
+                    for sec in sections:
+                        sec_lower = sec.lower()
+                        if "image_prompt" in sec_lower:
+                            image_keyword = sec.replace("IMAGE_PROMPT:", "").replace("Image Prompt:", "").strip()
+                        elif "exam_headings" in sec_lower:
+                            exam_headings = sec.replace("EXAM_HEADINGS:", "").replace("Exam Headings:", "").strip()
+                        elif "voiceover_script" in sec_lower:
+                            voiceover_script = sec.replace("VOICEOVER_SCRIPT:", "").replace("Voiceover Script:", "").strip()
+                        elif "questions" in sec_lower:
+                            related_questions = sec.replace("QUESTIONS:", "").replace("Questions:", "").strip()
 
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
             voiceover_clean = clean_text_for_voice(voiceover_script)
+            temp_audio_path = None
             
-            try:
-                temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                generate_voice(voiceover_clean, selected_voice_code, temp_audio.name)
-                progress_bar.progress(70); st.success("✨ Voice Synthesized!"); temp_audio_path = temp_audio.name
-            except: temp_audio_path = None
+            if voiceover_clean and len(voiceover_clean) > 5:
+                try:
+                    temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                    generate_voice(voiceover_clean, selected_voice_code, temp_audio.name)
+                    if os.path.exists(temp_audio.name) and os.path.getsize(temp_audio.name) > 0:
+                        progress_bar.progress(70)
+                        st.success("✨ Voice Synthesized!")
+                        temp_audio_path = temp_audio.name
+                    else:
+                        st.warning("⚠️ Voice generation failed silently.")
+                except Exception as voice_e:
+                    st.warning(f"⚠️ Voice Error: {voice_e}")
 
             st.markdown("---")
             st.markdown(f"""<div style="background-color: #161b26; padding: 25px; border-radius: 12px; border: 2px solid {t['primary']}; margin-bottom: 20px;"><h3 style="color: {t['primary']}; margin-top:0; border-bottom: 1px solid #333; padding-bottom:10px;">🎓 Exam Preparation Headings</h3><p style="font-size: 17px; color: #ffffff; line-height: 1.6;">{exam_headings.replace(chr(10), '<br>')}</p></div>""", unsafe_allow_html=True)
@@ -259,7 +275,10 @@ if st.button("🚀 Generate Answer / Lecture"):
             
             with col2:
                 st.subheader("🎙️ Ultra-Realistic AI Voice")
-                if temp_audio_path: st.audio(temp_audio_path, format="audio/mp3")
+                if temp_audio_path: 
+                    st.audio(temp_audio_path, format="audio/mp3")
+                else:
+                    st.warning("Audio unavailable for this generation.")
                 
                 st.markdown("---")
                 st.subheader("❓ Test Yourself (Related Questions)")
@@ -273,11 +292,13 @@ if st.button("🚀 Generate Answer / Lecture"):
                 st.subheader("💬 Still Confused? Ask Below")
                 follow_up = st.text_input("Ask a follow-up question:", key="follow_up_input")
                 if follow_up:
-                    chat_result = ask_chatgpt_brain(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
-                    chat_clean = clean_text_for_voice(chat_result)
-                    temp_chat_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                    generate_voice(chat_clean, selected_voice_code, temp_chat_audio.name)
-                    st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_result}</div>", unsafe_allow_html=True)
-                    st.audio(temp_chat_audio.name, format="audio/mp3")
+                    with st.spinner("Thinking..."):
+                        chat_result = ask_chatgpt_brain(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
+                        chat_clean = clean_text_for_voice(chat_result)
+                        temp_chat_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                        generate_voice(chat_clean, selected_voice_code, temp_chat_audio.name)
+                        st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_result}</div>", unsafe_allow_html=True)
+                        st.audio(temp_chat_audio.name, format="audio/mp3")
         else: st.error("⚠️ AI returned empty.")
-    except Exception as e: st.error(f"Execution Error: {e}")
+    except Exception as e: 
+        st.error(f"Execution Error: {e}")
