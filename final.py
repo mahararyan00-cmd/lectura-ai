@@ -8,79 +8,19 @@ import threading
 import os
 import re
 import edge_tts
-import sqlite3
-import hashlib
-
-# --- DATABASE & AUTH SYSTEM ---
-def init_db():
-    conn = sqlite3.connect('lectura_users.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (username TEXT PRIMARY KEY, password TEXT, is_premium BOOLEAN, lecture_count INTEGER)''')
-    conn.commit()
-    conn.close()
-
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def signup_user(username, password):
-    conn = sqlite3.connect('lectura_users.db')
-    c = conn.cursor()
-    try:
-        c.execute("INSERT INTO users (username, password, is_premium, lecture_count) VALUES (?, ?, 0, 0)", 
-                  (username, hash_password(password)))
-        conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
-    finally:
-        conn.close()
-
-def login_user(username, password):
-    conn = sqlite3.connect('lectura_users.db')
-    c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, hash_password(password)))
-    user = c.fetchone()
-    conn.close()
-    return user
-
-def set_premium_db(username):
-    conn = sqlite3.connect('lectura_users.db')
-    c = conn.cursor()
-    c.execute("UPDATE users SET is_premium=1 WHERE username=?", (username,))
-    conn.commit()
-    conn.close()
-
-def increment_lecture_count_db(username):
-    conn = sqlite3.connect('lectura_users.db')
-    c = conn.cursor()
-    c.execute("UPDATE users SET lecture_count = lecture_count + 1 WHERE username=?", (username,))
-    conn.commit()
-    c.execute("SELECT lecture_count FROM users WHERE username=?", (username,))
-    new_count = c.fetchone()[0]
-    conn.close()
-    return new_count
-
-init_db()
 
 # 1. PROFESSIONAL LOOK & THEME CONFIGURATION
 st.set_page_config(page_title="Lectura AI Pro", page_icon="🌟", layout="wide")
 
-# --- SESSION STATES ---
+# --- MONETIZATION & SESSION STATES ---
 if "history" not in st.session_state:
     st.session_state.history = []
-if "prompt_key" not in st.session_state:
-    st.session_state.prompt_key = 0
-
-# AUTH SESSION STATES
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-if "is_premium" not in st.session_state:
-    st.session_state.is_premium = False
 if "lecture_count" not in st.session_state:
     st.session_state.lecture_count = 0
+if "is_premium" not in st.session_state:
+    st.session_state.is_premium = False
+if "prompt_key" not in st.session_state:
+    st.session_state.prompt_key = 0
 
 FREE_LIMIT = 50 
 
@@ -116,75 +56,14 @@ def clean_text_for_voice(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# ==========================================
-# 🔐 LOGIN / SIGNUP SCREEN
-# ==========================================
-if not st.session_state.logged_in:
-    st.markdown("""
-        <style>
-        .stApp {background-color: #050A30; color: white;}
-        .stTextInput>div>div>input {background-color: #161b26; color: white; border: 1px solid #4169E1; border-radius: 8px;}
-        .stButton>button {background: linear-gradient(135deg, #4169E1 0%, #1E90FF 100%); color: black; font-weight: bold; border-radius: 8px; border: none; width: 100%; height: 45px;}
-        </style>
-    """, unsafe_allow_html=True)
-    
-    st.title("🌟 Lectura AI Pro — Login")
-    st.write("Please login or create a new account to continue.")
-    
-    tab1, tab2 = st.tabs(["🔐 Login", "🆕 Signup"])
-    
-    with tab2:
-        new_user = st.text_input("Choose a Username", key="signup_user")
-        new_pass = st.text_input("Choose a Password", type="password", key="signup_pass")
-        if st.button("Create Account"):
-            if new_user and new_pass:
-                if signup_user(new_user, new_pass):
-                    st.success("Account created successfully! Please go to the Login tab.")
-                else:
-                    st.error("Username already exists. Please choose another.")
-            else:
-                st.warning("Please enter both username and password.")
-                
-    with tab1:
-        login_user_input = st.text_input("Username", key="login_user")
-        login_pass_input = st.text_input("Password", type="password", key="login_pass")
-        if st.button("Login"):
-            user_data = login_user(login_user_input, login_pass_input)
-            if user_data:
-                st.session_state.logged_in = True
-                st.session_state.username = user_data[0]
-                st.session_state.is_premium = bool(user_data[2])
-                st.session_state.lecture_count = user_data[3]
-                st.success("Logged in successfully!")
-                safe_rerun()
-            else:
-                st.error("Invalid username or password.")
-    
-    st.stop()
-
-# ==========================================
-# FLOATING WHATSAPP BUTTON & SIDEBAR (MAIN APP)
-# ==========================================
+# FLOATING WHATSAPP BUTTON
 st.markdown(f"""
     <a href="{YOUR_WHATSAPP_LINK}" target="_blank" style="position: fixed; bottom: 20px; right: 20px; background-color: #25D366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.5); z-index: 999; text-decoration: none; font-size: 30px;">💬</a>
 """, unsafe_allow_html=True)
 
+# Sidebar
 with st.sidebar:
     st.title("⚙️ App Settings")
-    
-    # LOGOUT BUTTON & USER INFO
-    st.markdown(f"""
-        <div style="background-color: #161b26; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;">
-            <p style="color: white; margin:0; text-align:center;">👤 <b>{st.session_state.username}</b></p>
-        </div>
-    """, unsafe_allow_html=True)
-    if st.button("🚪 Logout", use_container_width=True):
-        st.session_state.logged_in = False
-        st.session_state.username = ""
-        st.session_state.is_premium = False
-        st.session_state.lecture_count = 0
-        safe_rerun()
-
     selected_theme = st.selectbox("🎨 Select Theme Color:", list(themes.keys()))
     t = themes[selected_theme]
     
@@ -227,7 +106,7 @@ with st.sidebar:
 # --- PAYWALL CHECK ---
 if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LIMIT:
     st.markdown("---")
-    st.error("🚫 **Free Limit Expired!**")
+    st.error("🚫 **Free Trial Expired!**")
     st.markdown(f"""
         <div style="background-color: #161b26; padding: 30px; border-radius: 12px; border: 2px solid #f7971e; text-align: center;">
             <h3 style="color: #f7971e;">👑 Upgrade to Premium</h3>
@@ -251,8 +130,7 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
         if st.button("🔓 Unlock Premium"):
             if code_input.strip() == correct_code:
                 st.session_state.is_premium = True
-                set_premium_db(st.session_state.username) # SAVE TO DATABASE
-                st.success("🎉 Premium Activated Forever!")
+                st.success("🎉 Premium Activated!")
                 safe_rerun()
             else: 
                 st.error("❌ Invalid Code!")
@@ -307,9 +185,7 @@ def ask_chatgpt_brain(prompt_text):
     raise Exception("Server overloaded.")
 
 if st.button("🚀 Generate Answer / Lecture"):
-    # SAVE LECTURE COUNT TO DATABASE
-    st.session_state.lecture_count = increment_lecture_count_db(st.session_state.username)
-    
+    st.session_state.lecture_count += 1
     if user_prompt not in st.session_state.history: st.session_state.history.append(user_prompt)
     progress_bar = st.progress(0)
     
