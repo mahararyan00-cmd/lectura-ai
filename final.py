@@ -22,7 +22,8 @@ if "is_premium" not in st.session_state:
 if "prompt_key" not in st.session_state:
     st.session_state.prompt_key = 0
 
-FREE_LIMIT = 50 
+# 🛑 LIMIT KO 10 KAR DIYA HAI TAAKE LOG JALDI PREMIUM LEIN
+FREE_LIMIT = 10 
 
 # ==========================================
 # 🛑 APNI DETAILS YAHAN DALEIN
@@ -76,6 +77,14 @@ with st.sidebar:
         </style>
     """, unsafe_allow_html=True)
 
+    # REMAINING LECTURES COUNTER (So user knows their limit)
+    remaining = FREE_LIMIT - st.session_state.lecture_count if not st.session_state.is_premium else "∞"
+    st.markdown(f"""
+        <div style="background-color: #161b26; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid {t['primary']};">
+            <p style="color: white; margin:0;">📊 Free Lectures Left: <b style="color: {t['primary']};">{remaining}</b></p>
+        </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("---")
     st.title("📜 Lecture History")
     if st.button("🆕 Start New Lecture", use_container_width=True):
@@ -106,7 +115,7 @@ with st.sidebar:
 # --- PAYWALL CHECK ---
 if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LIMIT:
     st.markdown("---")
-    st.error("🚫 **Free Trial Expired!**")
+    st.error("🚫 **Free Limit Expired!**")
     st.markdown(f"""
         <div style="background-color: #161b26; padding: 30px; border-radius: 12px; border: 2px solid #f7971e; text-align: center;">
             <h3 style="color: #f7971e;">👑 Upgrade to Premium</h3>
@@ -153,6 +162,14 @@ voice_codes = {"Roman Urdu": "en-IN-PrabhatNeural", "Urdu (اردو)": "ur-PK-As
 selected_voice_code = voice_codes[language_option]
 
 user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
+
+# 💰 GOOGLE ADSENSE PLACEHOLDER (App approve hone ke baad yahan ad aayega)
+st.markdown("""
+    <div style="background-color: #161b26; padding: 15px; border-radius: 8px; border: 1px dashed #444; text-align: center; margin-bottom: 20px;">
+        <p style="color: #888; margin:0; font-size: 12px;">📢 Advertisement Space (Support the Developer)</p>
+        <!-- Yahan Google AdSense ka code paste karein jab approve ho jaye -->
+    </div>
+""", unsafe_allow_html=True)
 
 def generate_voice(text, voice_code, filename):
     async def _save():
@@ -303,6 +320,15 @@ if st.button("🚀 Generate Answer / Lecture"):
                         generate_voice(chat_clean, selected_voice_code, temp_chat_audio.name)
                         st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_result}</div>", unsafe_allow_html=True)
                         st.audio(temp_chat_audio.name, format="audio/mp3")
+                        
+            # 💰 AD AT THE BOTTOM (Jab user result dekh raha ho, ad bhi click kar sakta hai)
+            st.markdown("""
+                <div style="background-color: #161b26; padding: 15px; border-radius: 8px; border: 1px dashed #444; text-align: center; margin-top: 20px;">
+                    <p style="color: #888; margin:0; font-size: 12px;">📢 Advertisement Space (Support the Developer)</p>
+                    <!-- Yahan Google AdSense ka code paste karein jab approve ho jaye -->
+                </div>
+            """, unsafe_allow_html=True)
+
         else: st.error("⚠️ AI returned empty.")
     except Exception as e: 
         st.error(f"Execution Error: {e}")
