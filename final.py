@@ -2,10 +2,7 @@ import streamlit as st
 import requests
 import tempfile
 import time
-import base64
 import asyncio
-import threading
-import os
 import re
 import edge_tts
 
@@ -22,13 +19,12 @@ if "is_premium" not in st.session_state:
 if "prompt_key" not in st.session_state:
     st.session_state.prompt_key = 0
 
-# 🛑 LIMIT KO 10 KAR DIYA HAI TAAKE LOG JALDI PREMIUM LEIN
-FREE_LIMIT = 10 
+FREE_LIMIT = 50 
 
 # ==========================================
 # 🛑 APNI DETAILS YAHAN DALEIN
 # ==========================================
-YOUR_EASYPAISA_NUMBER = "0300-0681582" # ⚠️ APNA ASLI EASYPAISA NUMBER YAHAN LIKHEN
+YOUR_EASYPAISA_NUMBER = "0300-1234567" # ⚠️ APNA ASLI EASYPAISA NUMBER YAHAN LIKHEN
 YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK
 # ==========================================
 
@@ -48,12 +44,8 @@ def safe_rerun():
         except: pass
 
 def clean_text_for_voice(text):
-    text = re.sub(r'Section\s*\d+\s*:', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'IMAGE_PROMPT|EXAM_HEADINGS|VOICEOVER_SCRIPT|QUESTIONS', '', text, flags=re.IGNORECASE)
     text = re.sub(r'[\[\(].*?[\]\)]', '', text)
     text = re.sub(r'\*.*?\*', '', text)
-    text = re.sub(r'[\*#_>`]', '', text)
-    text = text.replace('###', '')
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -75,14 +67,6 @@ with st.sidebar:
         .stTextInput>div>div>input {{background-color: #161b26; color: white; border: 1px solid {t['primary']}; border-radius: 8px;}}
         .chat-box {{background-color: #161b26; padding: 15px; border-radius: 10px; border-left: 5px solid {t['primary']}; margin-bottom: 10px;}}
         </style>
-    """, unsafe_allow_html=True)
-
-    # REMAINING LECTURES COUNTER (So user knows their limit)
-    remaining = FREE_LIMIT - st.session_state.lecture_count if not st.session_state.is_premium else "∞"
-    st.markdown(f"""
-        <div style="background-color: #161b26; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid {t['primary']};">
-            <p style="color: white; margin:0;">📊 Free Lectures Left: <b style="color: {t['primary']};">{remaining}</b></p>
-        </div>
     """, unsafe_allow_html=True)
 
     st.markdown("---")
@@ -115,7 +99,7 @@ with st.sidebar:
 # --- PAYWALL CHECK ---
 if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LIMIT:
     st.markdown("---")
-    st.error("🚫 **Free Limit Expired!**")
+    st.error("🚫 **Free Trial Expired!**")
     st.markdown(f"""
         <div style="background-color: #161b26; padding: 30px; border-radius: 12px; border: 2px solid #f7971e; text-align: center;">
             <h3 style="color: #f7971e;">👑 Upgrade to Premium</h3>
@@ -129,20 +113,17 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
     st.markdown("---")
     st.subheader("🔑 Unlock Premium")
     user_phone = st.text_input("📱 Apna Easypaisa/JazzCash Number daalein:", placeholder="e.g., 03001234567")
-    
     if user_phone:
         last_4_digits = user_phone.strip().replace("-", "").replace(" ", "")[-4:]
         correct_code = f"LECTURA-{last_4_digits}"
         st.info(f"💡 **Aapka Personal Code:** `LECTURA-{last_4_digits}`")
-        
         code_input = st.text_input("🔐 Yahan apna Personal Code enter karein:")
         if st.button("🔓 Unlock Premium"):
             if code_input.strip() == correct_code:
                 st.session_state.is_premium = True
                 st.success("🎉 Premium Activated!")
                 safe_rerun()
-            else: 
-                st.error("❌ Invalid Code!")
+            else: st.error("❌ Invalid Code!")
     st.stop()
 
 # Main Layout
@@ -157,41 +138,20 @@ st.markdown(f"""
 
 app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Fast Answers)", "🎬 Lecture Mode (Visual Simulation)"))
 language_option = st.selectbox("🎙️ Select Voiceover Language:", ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic"))
-
 voice_codes = {"Roman Urdu": "en-IN-PrabhatNeural", "Urdu (اردو)": "ur-PK-AsadNeural", "Hindi (हिन्दी)": "hi-IN-MadhurNeural", "English": "en-US-GuyNeural", "Arabic": "ar-SA-HamedNeural"}
 selected_voice_code = voice_codes[language_option]
 
 user_prompt = st.text_input("✍️ Type your question or topic here:", "Photosynthesis kya hai?", key=f"prompt_key_{st.session_state.prompt_key}")
 
-# 💰 GOOGLE ADSENSE PLACEHOLDER (App approve hone ke baad yahan ad aayega)
-st.markdown("""
-    <div style="background-color: #161b26; padding: 15px; border-radius: 8px; border: 1px dashed #444; text-align: center; margin-bottom: 20px;">
-        <p style="color: #888; margin:0; font-size: 12px;">📢 Advertisement Space (Support the Developer)</p>
-        <!-- Yahan Google AdSense ka code paste karein jab approve ho jaye -->
-    </div>
-""", unsafe_allow_html=True)
-
 def generate_voice(text, voice_code, filename):
     async def _save():
         communicate = edge_tts.Communicate(text, voice_code)
         await communicate.save(filename)
-        
-    def run_async():
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(_save())
-            loop.close()
-        except Exception as e:
-            print(f"Voice Error: {e}")
+    asyncio.run(_save())
 
-    thread = threading.Thread(target=run_async)
-    thread.start()
-    thread.join()
-
-def ask_chatgpt_brain(prompt_text):
+def ask_chatgpt_brain(prompt_text, lang="English"):
     url = "https://text.pollinations.ai/"
-    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow the requested format strictly."}, {"role": "user", "content": prompt_text}], "model": "openai", "seed": 42}
+    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow format strictly. Write pure spoken text."}, {"role": "user", "content": prompt_text}], "model": "openai", "seed": 42}
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -212,58 +172,82 @@ if st.button("🚀 Generate Answer / Lecture"):
     try:
         base_prompt = (
             f"Topic: {user_prompt}. Language: STRICTLY {language_option}. "
-            f"Write a response separated into exactly 4 sections using the word '###' on a new line.\n"
-            f"Section 1: IMAGE_PROMPT: [Write one English sentence describing an educational image for this topic]\n"
-            f"###\n"
-            f"Section 2: EXAM_HEADINGS: [Write 3-5 bullet points for exam preparation]\n"
-            f"###\n"
-            f"Section 3: VOICEOVER_SCRIPT: [Write a detailed spoken explanation. No markdown, no brackets.]\n"
-            f"###\n"
-            f"Section 4: QUESTIONS: [Write 5 important questions related to the topic]"
+            f"FORMAT:\n"
+            f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
+            f"2. Next line: '[HEADINGS_START]'\n 3-5 exam points.\n"
+            f"3. Next line: '[VOICEOVER_START]'\n Detailed spoken explanation. No [music].\n"
+            f"4. Next line: '[QUESTIONS_START]'\n 5 important questions.\n"
+            f"5. Next line: '[QUESTIONS_END]'"
         )
             
-        result = ask_chatgpt_brain(base_prompt)
+        result = ask_chatgpt_brain(base_prompt, lang=language_option)
         
         if result and len(result.strip()) > 10:
+            image_keyword, exam_headings, voiceover_script, related_questions = user_prompt, "", result, ""
             result_clean = re.sub(r'\*+', '', result) 
             
-            image_keyword = "educational concept 3D realistic"
-            exam_headings = "Headings not generated."
-            voiceover_script = result_clean
-            related_questions = "Questions not generated."
-
-            if "###" in result_clean:
-                sections = result_clean.split("###")
-                if len(sections) >= 4:
-                    for sec in sections:
-                        sec_lower = sec.lower()
-                        if "image_prompt" in sec_lower:
-                            image_keyword = re.sub(r'^(Section\s*\d+[:\s]*)?(IMAGE_PROMPT)\s*:', '', sec, flags=re.IGNORECASE).strip()
-                        elif "exam_headings" in sec_lower:
-                            exam_headings = re.sub(r'^(Section\s*\d+[:\s]*)?(EXAM_HEADINGS)\s*:', '', sec, flags=re.IGNORECASE).strip()
-                        elif "voiceover_script" in sec_lower:
-                            voiceover_script = re.sub(r'^(Section\s*\d+[:\s]*)?(VOICEOVER_SCRIPT)\s*:', '', sec, flags=re.IGNORECASE).strip()
-                        elif "questions" in sec_lower:
-                            related_questions = re.sub(r'^(Section\s*\d+[:\s]*)?(QUESTIONS)\s*:', '', sec, flags=re.IGNORECASE).strip()
+            # 1. Extract Image Prompt
+            if "IMAGE_PROMPT:" in result_clean:
+                for line in result_clean.split('\n'):
+                    if line.strip().startswith("IMAGE_PROMPT:"): 
+                        image_keyword = line.replace("IMAGE_PROMPT:", "").strip()
+                        result_clean = result_clean.replace(line, "").strip()
+            
+            # 2. Normalize any random tags AI might write
+            result_clean = result_clean.replace("=== EXAM HEADINGS ===", "[HEADINGS_START]")
+            result_clean = result_clean.replace("=== VOICEOVER SCRIPT ===", "[VOICEOVER_START]")
+            result_clean = result_clean.replace("=== QUESTIONS ===", "[QUESTIONS_START]")
+            
+            # 3. SMART BULLETPROOF PARSING
+            if "[HEADINGS_START]" in result_clean:
+                parts = result_clean.split("[HEADINGS_START]", 1)
+                if len(parts) > 1:
+                    rest = parts[1]
+                    if "[VOICEOVER_START]" in rest:
+                        sub_parts = rest.split("[VOICEOVER_START]", 1)
+                        exam_headings = sub_parts[0].strip()
+                        rest = sub_parts[1]
+                    else:
+                        exam_headings = rest.strip() # Fallback
+                        rest = ""
+                        
+                    if "[QUESTIONS_START]" in rest:
+                        q_parts = rest.split("[QUESTIONS_START]", 1)
+                        voiceover_script = q_parts[0].strip()
+                        related_questions = q_parts[1].replace("[QUESTIONS_END]", "").strip()
+                    else:
+                        voiceover_script = rest.strip()
+            
+            # Ultimate Fallbacks if AI completely ignores tags
+            if not exam_headings: exam_headings = "Key concepts from the lecture."
+            if not voiceover_script: voiceover_script = result_clean if result_clean else result
+            if not related_questions: related_questions = ""
+            
+            # 4. GUARANTEED QUESTIONS LOGIC (If AI forgot questions, ask again!)
+            if not related_questions or related_questions == "Questions not generated.":
+                try:
+                    q_prompt = f"Generate exactly 5 important exam questions about: {user_prompt}. Language: STRICTLY {language_option}. Only list the questions."
+                    related_questions = ask_chatgpt_brain(q_prompt, lang=language_option)
+                except:
+                    related_questions = "Could not generate questions."
 
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
+            # Clean voice text to prevent TTS crashing
             voiceover_clean = clean_text_for_voice(voiceover_script)
-            temp_audio_path = None
+            if not voiceover_clean.strip():
+                voiceover_clean = clean_text_for_voice(result)
             
-            if voiceover_clean and len(voiceover_clean) > 5:
-                try:
-                    temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                    generate_voice(voiceover_clean, selected_voice_code, temp_audio.name)
-                    if os.path.exists(temp_audio.name) and os.path.getsize(temp_audio.name) > 0:
-                        progress_bar.progress(70)
-                        st.success("✨ Voice Synthesized!")
-                        temp_audio_path = temp_audio.name
-                    else:
-                        st.warning("⚠️ Voice generation failed silently.")
-                except Exception as voice_e:
-                    st.warning(f"⚠️ Voice Error: {voice_e}")
+            temp_audio_path = None
+            try:
+                temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                generate_voice(voiceover_clean, selected_voice_code, temp_audio.name)
+                progress_bar.progress(70)
+                st.success("✨ Voice Synthesized!")
+                temp_audio_path = temp_audio.name
+            except Exception as e:
+                st.warning(f"Voice generation issue: {e}")
 
             st.markdown("---")
             st.markdown(f"""<div style="background-color: #161b26; padding: 25px; border-radius: 12px; border: 2px solid {t['primary']}; margin-bottom: 20px;"><h3 style="color: {t['primary']}; margin-top:0; border-bottom: 1px solid #333; padding-bottom:10px;">🎓 Exam Preparation Headings</h3><p style="font-size: 17px; color: #ffffff; line-height: 1.6;">{exam_headings.replace(chr(10), '<br>')}</p></div>""", unsafe_allow_html=True)
@@ -296,10 +280,7 @@ if st.button("🚀 Generate Answer / Lecture"):
             
             with col2:
                 st.subheader("🎙️ Ultra-Realistic AI Voice")
-                if temp_audio_path: 
-                    st.audio(temp_audio_path, format="audio/mp3")
-                else:
-                    st.warning("Audio unavailable for this generation.")
+                if temp_audio_path: st.audio(temp_audio_path, format="audio/mp3")
                 
                 st.markdown("---")
                 st.subheader("❓ Test Yourself (Related Questions)")
@@ -313,22 +294,11 @@ if st.button("🚀 Generate Answer / Lecture"):
                 st.subheader("💬 Still Confused? Ask Below")
                 follow_up = st.text_input("Ask a follow-up question:", key="follow_up_input")
                 if follow_up:
-                    with st.spinner("Thinking..."):
-                        chat_result = ask_chatgpt_brain(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
-                        chat_clean = clean_text_for_voice(chat_result)
-                        temp_chat_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                        generate_voice(chat_clean, selected_voice_code, temp_chat_audio.name)
-                        st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_result}</div>", unsafe_allow_html=True)
-                        st.audio(temp_chat_audio.name, format="audio/mp3")
-                        
-            # 💰 AD AT THE BOTTOM (Jab user result dekh raha ho, ad bhi click kar sakta hai)
-            st.markdown("""
-                <div style="background-color: #161b26; padding: 15px; border-radius: 8px; border: 1px dashed #444; text-align: center; margin-top: 20px;">
-                    <p style="color: #888; margin:0; font-size: 12px;">📢 Advertisement Space (Support the Developer)</p>
-                    <!-- Yahan Google AdSense ka code paste karein jab approve ho jaye -->
-                </div>
-            """, unsafe_allow_html=True)
-
+                    chat_result = ask_chatgpt_brain(f"About '{user_prompt}', answer briefly in {language_option}: {follow_up}")
+                    chat_clean = clean_text_for_voice(chat_result)
+                    temp_chat_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                    generate_voice(chat_clean, selected_voice_code, temp_chat_audio.name)
+                    st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_result}</div>", unsafe_allow_html=True)
+                    st.audio(temp_chat_audio.name, format="audio/mp3")
         else: st.error("⚠️ AI returned empty.")
-    except Exception as e: 
-        st.error(f"Execution Error: {e}")
+    except Exception as e: st.error(f"Execution Error: {e}")
