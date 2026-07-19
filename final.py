@@ -24,8 +24,8 @@ FREE_LIMIT = 50
 # ==========================================
 # 🛑 APNI DETAILS YAHAN DALEIN
 # ==========================================
-YOUR_EASYPAISA_NUMBER = "03000681582" # ✅ APNA EASYPAISA NUMBER UPDATED
-YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK
+YOUR_EASYPAISA_NUMBER = "03000681582" 
+YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" 
 # ==========================================
 
 # --- THEME SETTINGS ---
@@ -43,9 +43,18 @@ def safe_rerun():
         try: st.experimental_rerun()
         except: pass
 
+# FUNCTION TO CLEAN VOICE & REMOVE RELIGIOUS/FILLER WORDS
 def clean_text_for_voice(text):
     text = re.sub(r'[\[\(].*?[\]\)]', '', text)
     text = re.sub(r'\*.*?\*', '', text)
+    # Remove specific unwanted phrases (case-insensitive)
+    bad_phrases = [
+        'allah ka shukriya', 'allah ka shukar', 'shukriya', 'jazakallah', 'jazak allah', 
+        'inshallah', 'insha allah', 'mashallah', 'masha allah', 'subhanallah', 
+        'thank you', 'thanks', 'hope this helps', 'conclusion', 'in conclusion'
+    ]
+    for phrase in bad_phrases:
+        text = re.sub(phrase, '', text, flags=re.IGNORECASE)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -86,7 +95,6 @@ with st.sidebar:
                     safe_rerun()
     else: st.write("No previous lectures yet.")
 
-    # SIDEBAR PREMIUM INFO (Clean, no ad)
     st.markdown("---")
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 20px; text-align: center; border-radius: 10px; color: black;">
@@ -143,9 +151,20 @@ def generate_voice(text, voice_code, filename):
         await communicate.save(filename)
     asyncio.run(_save())
 
+# ✅ STRICT AI BRAIN FUNCTION (No Shukriya)
 def ask_chatgpt_brain(prompt_text, lang="English"):
     url = "https://text.pollinations.ai/"
-    payload = {"messages": [{"role": "system", "content": "You are an expert AI tutor. Follow format strictly. Write pure spoken text."}, {"role": "user", "content": prompt_text}], "model": "openai", "seed": 42}
+    payload = {
+        "messages": [
+            {
+                "role": "system", 
+                "content": "You are a strict, expert AI tutor. Write ONLY pure educational text. STRICTLY DO NOT add any greetings, sign-offs, religious phrases (like 'Allah ka shukriya', 'Jazakallah', 'Inshallah'), or filler words. End immediately after the last fact."
+            }, 
+            {"role": "user", "content": prompt_text}
+        ], 
+        "model": "openai", 
+        "seed": 42
+    }
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
@@ -169,7 +188,7 @@ if st.button("🚀 Generate Answer / Lecture"):
             f"FORMAT:\n"
             f"1. First line: 'IMAGE_PROMPT: ' + 1 English sentence.\n"
             f"2. Next line: '[HEADINGS_START]'\n 3-5 exam points.\n"
-            f"3. Next line: '[VOICEOVER_START]'\n Detailed spoken explanation. No [music].\n"
+            f"3. Next line: '[VOICEOVER_START]'\n Detailed spoken explanation. No [music]. DO NOT write any religious sign-offs.\n"
             f"4. Next line: '[QUESTIONS_START]'\n 5 important questions.\n"
             f"5. Next line: '[QUESTIONS_END]'"
         )
@@ -180,19 +199,16 @@ if st.button("🚀 Generate Answer / Lecture"):
             image_keyword, exam_headings, voiceover_script, related_questions = user_prompt, "", result, ""
             result_clean = re.sub(r'\*+', '', result) 
             
-            # 1. Extract Image Prompt
             if "IMAGE_PROMPT:" in result_clean:
                 for line in result_clean.split('\n'):
                     if line.strip().startswith("IMAGE_PROMPT:"): 
                         image_keyword = line.replace("IMAGE_PROMPT:", "").strip()
                         result_clean = result_clean.replace(line, "").strip()
             
-            # 2. Normalize any random tags AI might write
             result_clean = result_clean.replace("=== EXAM HEADINGS ===", "[HEADINGS_START]")
             result_clean = result_clean.replace("=== VOICEOVER SCRIPT ===", "[VOICEOVER_START]")
             result_clean = result_clean.replace("=== QUESTIONS ===", "[QUESTIONS_START]")
             
-            # 3. SMART BULLETPROOF PARSING
             if "[HEADINGS_START]" in result_clean:
                 parts = result_clean.split("[HEADINGS_START]", 1)
                 if len(parts) > 1:
@@ -212,12 +228,10 @@ if st.button("🚀 Generate Answer / Lecture"):
                     else:
                         voiceover_script = rest.strip()
             
-            # Ultimate Fallbacks
             if not exam_headings: exam_headings = "Key concepts from the lecture."
             if not voiceover_script: voiceover_script = result_clean if result_clean else result
             if not related_questions: related_questions = ""
             
-            # GUARANTEED QUESTIONS LOGIC
             if not related_questions or related_questions == "Questions not generated.":
                 try:
                     q_prompt = f"Generate exactly 5 important exam questions about: {user_prompt}. Language: STRICTLY {language_option}. Only list the questions."
@@ -228,10 +242,13 @@ if st.button("🚀 Generate Answer / Lecture"):
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
-            # Clean voice text
+            # Clean voice text to remove Shukriya etc
             voiceover_clean = clean_text_for_voice(voiceover_script)
             if not voiceover_clean.strip():
                 voiceover_clean = clean_text_for_voice(result)
+            
+            # Also clean the display script
+            voiceover_display = clean_text_for_voice(voiceover_script)
             
             temp_audio_path = None
             try:
@@ -261,16 +278,16 @@ if st.button("🚀 Generate Answer / Lecture"):
             col1, col2 = st.columns(2)
             with col1:
                 st.subheader(f"🎬 AI Voiceover Script ({language_option})")
-                st.write(voiceover_script)
+                st.write(voiceover_display) # Cleaned text displayed
                 st.markdown("### 📥 Save & Share Options")
                 dl_col1, dl_col2, dl_col3 = st.columns(3)
-                with dl_col1: st.download_button(label="📄 Download Script", data=voiceover_script, file_name="Lectura_AI_Script.txt", mime="text/plain")
+                with dl_col1: st.download_button(label="📄 Download Script", data=voiceover_display, file_name="Lectura_AI_Script.txt", mime="text/plain")
                 with dl_col2:
                     if temp_audio_path:
                         with open(temp_audio_path, "rb") as f: audio_bytes = f.read()
                         st.download_button(label="🎧 Download Audio", data=audio_bytes, file_name="Lectura_AI_Voice.mp3", mime="audio/mp3")
                 with dl_col3:
-                    if st.button("📋 Copy Text"): st.markdown(f"""<script>navigator.clipboard.writeText(`{voiceover_script.replace('`', "'")}`);</script>""", unsafe_allow_html=True); st.success("Copied!")
+                    if st.button("📋 Copy Text"): st.markdown(f"""<script>navigator.clipboard.writeText(`{voiceover_display.replace('`', "'")}`);</script>""", unsafe_allow_html=True); st.success("Copied!")
             
             with col2:
                 st.subheader("🎙️ Ultra-Realistic AI Voice")
@@ -292,7 +309,7 @@ if st.button("🚀 Generate Answer / Lecture"):
                     chat_clean = clean_text_for_voice(chat_result)
                     temp_chat_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                     generate_voice(chat_clean, selected_voice_code, temp_chat_audio.name)
-                    st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_result}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='chat-box'><b>You:</b> {follow_up}<br><br><b>ChatGPT AI:</b> {chat_clean}</div>", unsafe_allow_html=True)
                     st.audio(temp_chat_audio.name, format="audio/mp3")
         else: st.error("⚠️ AI returned empty.")
     except Exception as e: st.error(f"Execution Error: {e}")
