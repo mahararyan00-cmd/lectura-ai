@@ -24,7 +24,7 @@ FREE_LIMIT = 50
 # ==========================================
 # 🛑 APNI DETAILS YAHAN DALEIN
 # ==========================================
-YOUR_EASYPAISA_NUMBER = "0300-1234567" # ⚠️ APNA ASLI EASYPAISA NUMBER YAHAN LIKHEN
+YOUR_EASYPAISA_NUMBER = "03000681582" # ✅ APNA EASYPAISA NUMBER UPDATED
 YOUR_WHATSAPP_LINK = "https://wa.link/le4wa7" # ✅ WHATSAPP LINK
 # ==========================================
 
@@ -86,6 +86,7 @@ with st.sidebar:
                     safe_rerun()
     else: st.write("No previous lectures yet.")
 
+    # SIDEBAR PREMIUM INFO (Clean, no ad)
     st.markdown("---")
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 20px; text-align: center; border-radius: 10px; color: black;">
@@ -128,13 +129,6 @@ if not st.session_state.is_premium and st.session_state.lecture_count >= FREE_LI
 
 # Main Layout
 st.title("🌟 Lectura AI Pro — Studio Dashboard")
-st.write("Powered by ChatGPT Brain & Ultra-Realistic Voice")
-
-st.markdown(f"""
-    <div style="background-color: #161b26; padding: 15px; text-align: center; border-radius: 8px; border: 2px solid {t['primary']}; margin-bottom: 20px;">
-        <p style="color: white; font-size: 16px; font-weight: bold; margin:0;">📚 Ace Your Exams with AI Visual Lectures & Quiz!</p>
-    </div>
-""", unsafe_allow_html=True)
 
 app_mode = st.radio("🎯 Select Mode:", ("📖 Q&A Mode (Fast Answers)", "🎬 Lecture Mode (Visual Simulation)"))
 language_option = st.selectbox("🎙️ Select Voiceover Language:", ("Roman Urdu", "Urdu (اردو)", "Hindi (हिन्दी)", "English", "Arabic"))
@@ -208,7 +202,7 @@ if st.button("🚀 Generate Answer / Lecture"):
                         exam_headings = sub_parts[0].strip()
                         rest = sub_parts[1]
                     else:
-                        exam_headings = rest.strip() # Fallback
+                        exam_headings = rest.strip()
                         rest = ""
                         
                     if "[QUESTIONS_START]" in rest:
@@ -218,12 +212,12 @@ if st.button("🚀 Generate Answer / Lecture"):
                     else:
                         voiceover_script = rest.strip()
             
-            # Ultimate Fallbacks if AI completely ignores tags
+            # Ultimate Fallbacks
             if not exam_headings: exam_headings = "Key concepts from the lecture."
             if not voiceover_script: voiceover_script = result_clean if result_clean else result
             if not related_questions: related_questions = ""
             
-            # 4. GUARANTEED QUESTIONS LOGIC (If AI forgot questions, ask again!)
+            # GUARANTEED QUESTIONS LOGIC
             if not related_questions or related_questions == "Questions not generated.":
                 try:
                     q_prompt = f"Generate exactly 5 important exam questions about: {user_prompt}. Language: STRICTLY {language_option}. Only list the questions."
@@ -234,7 +228,7 @@ if st.button("🚀 Generate Answer / Lecture"):
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
-            # Clean voice text to prevent TTS crashing
+            # Clean voice text
             voiceover_clean = clean_text_for_voice(voiceover_script)
             if not voiceover_clean.strip():
                 voiceover_clean = clean_text_for_voice(result)
