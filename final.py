@@ -47,7 +47,6 @@ def safe_rerun():
 def clean_text_for_voice(text):
     text = re.sub(r'[\[\(].*?[\]\)]', '', text)
     text = re.sub(r'\*.*?\*', '', text)
-    # Remove specific unwanted phrases (case-insensitive)
     bad_phrases = [
         'allah ka shukriya', 'allah ka shukar', 'shukriya', 'jazakallah', 'jazak allah', 
         'inshallah', 'insha allah', 'mashallah', 'masha allah', 'subhanallah', 
@@ -69,12 +68,59 @@ with st.sidebar:
     selected_theme = st.selectbox("🎨 Select Theme Color:", list(themes.keys()))
     t = themes[selected_theme]
     
+    # ✅ ULTRA-POWERFUL CSS (100% White Text Fix)
     st.markdown(f"""
         <style>
-        [data-testid="stAppViewContainer"], .stApp {{background-color: {t['bg']} !important; color: #ffffff !important;}}
-        .stButton>button {{background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); color: black; font-weight: bold; border-radius: 8px; border: none; width: 100%; height: 45px;}}
-        .stTextInput>div>div>input {{background-color: #161b26; color: white; border: 1px solid {t['primary']}; border-radius: 8px;}}
-        .chat-box {{background-color: #161b26; padding: 15px; border-radius: 10px; border-left: 5px solid {t['primary']}; margin-bottom: 10px;}}
+        /* Main Backgrounds */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"], [data-testid="stHeader"] {{
+            background-color: {t['bg']} !important;
+        }}
+        /* Force ALL Text to White */
+        h1, h2, h3, h4, h5, h6, p, span, div, label, li, th, td, pre, code, summary, details, .stMarkdown {{
+            color: #ffffff !important;
+        }}
+        /* Input Box Text & Borders */
+        .stTextInput > div > div > input, .stTextArea > div > div > textarea {{
+            background-color: #161b26 !important;
+            color: #ffffff !important;
+            border: 1px solid {t['primary']} !important;
+            border-radius: 8px !important;
+        }}
+        /* Buttons */
+        .stButton > button {{
+            background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%) !important;
+            color: black !important;
+            font-weight: bold !important;
+            border-radius: 8px !important;
+            border: none !important;
+        }}
+        /* Radio & Selectbox Labels */
+        .stRadio div label, .stSelectbox div label, .stRadio label, .stSelectbox label {{
+            color: #ffffff !important;
+        }}
+        /* Info, Success, Error Box Text */
+        .stAlert p, .stInfo p, .stSuccess p, .stError p, .stWarning p {{
+            color: #ffffff !important;
+        }}
+        /* Chat Box */
+        .chat-box {{
+            background-color: #161b26 !important;
+            padding: 15px !important;
+            border-radius: 10px !important;
+            border-left: 5px solid {t['primary']} !important;
+            margin-bottom: 10px !important;
+            color: white !important;
+        }}
+        /* Sidebar Specific Text */
+        [data-testid="stSidebar"] * {{
+            color: #ffffff !important;
+        }}
+        /* Download Buttons */
+        .stDownloadButton > button {{
+            background-color: #161b26 !important;
+            color: {t['primary']} !important;
+            border: 1px solid {t['primary']} !important;
+        }}
         </style>
     """, unsafe_allow_html=True)
 
@@ -99,8 +145,8 @@ with st.sidebar:
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, {t['primary']} 0%, {t['secondary']} 100%); padding: 20px; text-align: center; border-radius: 10px; color: black;">
             <h3 style="margin:0; color: #050A30;">👑 Get Premium!</h3>
-            <p style="margin:5px 0; font-size: 14px; font-weight:bold;">Unlimited Lectures - Rs. 500</p>
-            <p style="margin:0; font-size: 12px;">🇵🇰 Easypaisa/JazzCash: <b>{YOUR_EASYPAISA_NUMBER}</b></p>
+            <p style="margin:5px 0; font-size: 14px; font-weight:bold; color: black;">Unlimited Lectures - Rs. 500</p>
+            <p style="margin:0; font-size: 12px; color: black;">🇵🇰 Easypaisa/JazzCash: <b>{YOUR_EASYPAISA_NUMBER}</b></p>
             <a href="{YOUR_WHATSAPP_LINK}" target="_blank" style="background-color: #25D366; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; display: inline-block; margin-top: 10px; font-weight: bold;">💬 WhatsApp for Code</a>
         </div>
     """, unsafe_allow_html=True)
@@ -151,7 +197,6 @@ def generate_voice(text, voice_code, filename):
         await communicate.save(filename)
     asyncio.run(_save())
 
-# ✅ STRICT AI BRAIN FUNCTION (No Shukriya)
 def ask_chatgpt_brain(prompt_text, lang="English"):
     url = "https://text.pollinations.ai/"
     payload = {
@@ -242,12 +287,10 @@ if st.button("🚀 Generate Answer / Lecture"):
             progress_bar.progress(50)
             st.success("✨ ChatGPT Brain Answered!")
             
-            # Clean voice text to remove Shukriya etc
             voiceover_clean = clean_text_for_voice(voiceover_script)
             if not voiceover_clean.strip():
                 voiceover_clean = clean_text_for_voice(result)
             
-            # Also clean the display script
             voiceover_display = clean_text_for_voice(voiceover_script)
             
             temp_audio_path = None
@@ -278,7 +321,7 @@ if st.button("🚀 Generate Answer / Lecture"):
             col1, col2 = st.columns(2)
             with col1:
                 st.subheader(f"🎬 AI Voiceover Script ({language_option})")
-                st.write(voiceover_display) # Cleaned text displayed
+                st.write(voiceover_display)
                 st.markdown("### 📥 Save & Share Options")
                 dl_col1, dl_col2, dl_col3 = st.columns(3)
                 with dl_col1: st.download_button(label="📄 Download Script", data=voiceover_display, file_name="Lectura_AI_Script.txt", mime="text/plain")
